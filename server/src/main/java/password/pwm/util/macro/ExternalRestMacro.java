@@ -103,10 +103,10 @@ class ExternalRestMacro extends AbstractMacro
                 return "";
             }
         }
-        catch ( PwmException e )
+        catch ( final PwmException e )
         {
             final String errorMsg = "error while executing external macro '" + matchValue + "', error: " + e.getMessage();
-            LOGGER.error( errorMsg );
+            LOGGER.error( () -> errorMsg );
             throw new IllegalStateException( errorMsg );
         }
     }

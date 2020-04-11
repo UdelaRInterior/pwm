@@ -20,10 +20,14 @@
 
 package password.pwm.config.value;
 
+import password.pwm.PwmConstants;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.StoredValue;
+import password.pwm.config.stored.StoredConfigXmlConstants;
+import password.pwm.config.stored.XmlOutputProcessData;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.util.java.JavaHelper;
+import password.pwm.util.java.StringUtil;
 import password.pwm.util.java.XmlElement;
 import password.pwm.util.java.XmlFactory;
 import password.pwm.util.logging.PwmLogger;
@@ -47,7 +51,7 @@ import java.util.Map;
 public class X509CertificateValue extends AbstractValue implements StoredValue
 {
     private static final PwmLogger LOGGER = PwmLogger.forClass( X509CertificateValue.class );
-    private X509Certificate[] certificates;
+    private final X509Certificate[] certificates;
 
     public static StoredValueFactory factory( )
     {
@@ -56,7 +60,7 @@ public class X509CertificateValue extends AbstractValue implements StoredValue
             public X509CertificateValue fromXmlElement( final PwmSetting pwmSetting, final XmlElement settingElement, final PwmSecurityKey key )
             {
                 final List<X509Certificate> certificates = new ArrayList<>();
-                final List<XmlElement> valueElements = settingElement.getChildren( "value" );
+                final List<XmlElement> valueElements = settingElement.getChildren( StoredConfigXmlConstants.XML_ELEMENT_VALUE );
                 for ( final XmlElement loopValueElement : valueElements )
                 {
                     final String b64encodedStr = loopValueElement.getText();
@@ -64,9 +68,9 @@ public class X509CertificateValue extends AbstractValue implements StoredValue
                     {
                         certificates.add( X509Utils.certificateFromBase64( b64encodedStr ) );
                     }
-                    catch ( Exception e )
+                    catch ( final Exception e )
                     {
-                        LOGGER.error( "error decoding certificate: " + e.getMessage() );
+                        LOGGER.error( () -> "error decoding certificate: " + e.getMessage() );
                     }
                 }
                 return new X509CertificateValue( certificates.toArray( new X509Certificate[ certificates.size() ] ) );
@@ -99,12 +103,12 @@ public class X509CertificateValue extends AbstractValue implements StoredValue
         {
             throw new NullPointerException( "certificates cannot be null" );
         }
-        this.certificates = certificates.toArray( new X509Certificate[ certificates.size() ] );
+        this.certificates = certificates.toArray( new X509Certificate[0] );
     }
 
 
     @Override
-    public List<XmlElement> toXmlValues( final String valueElementName, final PwmSecurityKey pwmSecurityKey  )
+    public List<XmlElement> toXmlValues( final String valueElementName, final XmlOutputProcessData xmlOutputProcessData )
     {
         final List<XmlElement> returnList = new ArrayList<>();
         for ( final X509Certificate value : certificates )
@@ -112,11 +116,13 @@ public class X509CertificateValue extends AbstractValue implements StoredValue
             final XmlElement valueElement = XmlFactory.getFactory().newElement( valueElementName );
             try
             {
-                valueElement.addText( X509Utils.certificateToBase64( value ) );
+                final String b64Value = X509Utils.certificateToBase64( value );
+                final String splitValue = StringUtil.insertRepeatedLineBreaks( b64Value, PwmConstants.XML_OUTPUT_LINE_WRAP_LENGTH );
+                valueElement.addText( splitValue );
             }
-            catch ( CertificateEncodingException e )
+            catch ( final CertificateEncodingException e )
             {
-                LOGGER.error( "error encoding certificate: " + e.getMessage() );
+                LOGGER.error( () -> "error encoding certificate: " + e.getMessage() );
             }
             returnList.add( valueElement );
         }
@@ -154,9 +160,9 @@ public class X509CertificateValue extends AbstractValue implements StoredValue
                 sb.append( " SHA1 Hash: " ).append( SecureEngine.hash( new ByteArrayInputStream( cert.getEncoded() ),
                         PwmHashAlgorithm.SHA1 ) ).append( "\n" );
             }
-            catch ( PwmUnrecoverableException | CertificateEncodingException e )
+            catch ( final PwmUnrecoverableException | CertificateEncodingException e )
             {
-                LOGGER.warn( "error generating hash for certificate: " + e.getMessage() );
+                LOGGER.warn( () -> "error generating hash for certificate: " + e.getMessage() );
             }
         }
         return sb.toString();

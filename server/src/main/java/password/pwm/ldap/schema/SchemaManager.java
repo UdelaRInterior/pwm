@@ -73,14 +73,14 @@ public class SchemaManager
             schemaExtenderImpl.init( chaiProvider );
             return schemaExtenderImpl;
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_DIRECTORY_UNAVAILABLE, e.getMessage() ) );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMsg = "error instantiating schema extender: " + e.getMessage();
-            LOGGER.error( errorMsg );
+            LOGGER.error( () -> errorMsg );
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg ) );
         }
 

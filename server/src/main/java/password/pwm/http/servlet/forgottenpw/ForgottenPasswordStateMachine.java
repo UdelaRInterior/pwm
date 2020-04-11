@@ -286,11 +286,11 @@ public class ForgottenPasswordStateMachine
                             password1 );
                 }
             }
-            catch ( PwmOperationalException e )
+            catch ( final PwmOperationalException e )
             {
                 throw new PwmUnrecoverableException( e.getErrorInformation() );
             }
-            catch ( ChaiUnavailableException e )
+            catch ( final ChaiUnavailableException e )
             {
                 throw PwmUnrecoverableException.fromChaiException( e );
             }
@@ -498,7 +498,7 @@ public class ForgottenPasswordStateMachine
                                 true
                         );
                     }
-                    catch ( PwmOperationalException e )
+                    catch ( final PwmOperationalException e )
                     {
                         errorInformation = new ErrorInformation( PwmError.ERROR_INCORRECT_OTP_TOKEN, e.getErrorInformation().toDebugStr() );
                     }
@@ -600,7 +600,7 @@ public class ForgottenPasswordStateMachine
                         return;
                     }
                 }
-                catch ( PwmUnrecoverableException e )
+                catch ( final PwmUnrecoverableException e )
                 {
                     LOGGER.debug( commonValues.getSessionLabel(), () -> "error while checking entered token: " );
                     errorInformation = e.getErrorInformation();
@@ -677,7 +677,7 @@ public class ForgottenPasswordStateMachine
                 {
                     responsesPassed = responseSet.test( crMap );
                 }
-                catch ( ChaiUnavailableException e )
+                catch ( final ChaiUnavailableException e )
                 {
                     throw PwmUnrecoverableException.fromChaiException( e );
                 }
@@ -797,9 +797,9 @@ public class ForgottenPasswordStateMachine
                                 ) );
                             }
                         }
-                        catch ( ChaiOperationException e )
+                        catch ( final ChaiOperationException e )
                         {
-                            LOGGER.error( sessionLabel, "error during param validation of '" + attrName + "', error: " + e.getMessage() );
+                            LOGGER.error( sessionLabel, () -> "error during param validation of '" + attrName + "', error: " + e.getMessage() );
                             throw new PwmDataValidationException( new ErrorInformation(
                                     PwmError.ERROR_INCORRECT_RESPONSE, "ldap error testing value for '" + attrName + "'", new String[]
                                     {
@@ -807,7 +807,7 @@ public class ForgottenPasswordStateMachine
                                     }
                             ) );
                         }
-                        catch ( ChaiUnavailableException e )
+                        catch ( final ChaiUnavailableException e )
                         {
                             throw PwmUnrecoverableException.fromChaiException( e );
                         }
@@ -815,7 +815,7 @@ public class ForgottenPasswordStateMachine
 
                     forgottenPasswordBean.getProgress().getSatisfiedMethods().add( IdentityVerificationMethod.ATTRIBUTES );
                 }
-                catch ( PwmDataValidationException e )
+                catch ( final PwmDataValidationException e )
                 {
                     handleUserVerificationBadAttempt(
                             forgottenPasswordStateMachine.getCommonValues(),
@@ -1006,7 +1006,7 @@ public class ForgottenPasswordStateMachine
 
                 return;
             }
-            catch ( PwmOperationalException e )
+            catch ( final PwmOperationalException e )
             {
                 if ( e.getError() != PwmError.ERROR_CANT_MATCH_USER || !bogusUserModeEnabled )
                 {

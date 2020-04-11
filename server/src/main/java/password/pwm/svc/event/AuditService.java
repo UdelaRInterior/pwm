@@ -98,14 +98,14 @@ public class AuditService implements PwmService
         if ( pwmApplication.getApplicationMode() == null || pwmApplication.getApplicationMode() == PwmApplicationMode.READ_ONLY )
         {
             this.status = STATUS.CLOSED;
-            LOGGER.warn( "unable to start - Application is in read-only mode" );
+            LOGGER.warn( () -> "unable to start - Application is in read-only mode" );
             return;
         }
 
         if ( pwmApplication.getLocalDB() == null || pwmApplication.getLocalDB().status() != LocalDB.Status.OPEN )
         {
             this.status = STATUS.CLOSED;
-            LOGGER.warn( "unable to start - LocalDB is not available" );
+            LOGGER.warn( () -> "unable to start - LocalDB is not available" );
             return;
         }
 
@@ -116,10 +116,10 @@ public class AuditService implements PwmService
             {
                 syslogManager = new SyslogAuditService( pwmApplication );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_SYSLOG_WRITE_ERROR, "startup error: " + e.getMessage() );
-                LOGGER.error( errorInformation.toDebugStr() );
+                LOGGER.error( () -> errorInformation.toDebugStr() );
             }
         }
         {
@@ -336,7 +336,7 @@ public class AuditService implements PwmService
     public void submit( final AuditEvent auditEvent, final UserInfo userInfo, final PwmSession pwmSession )
             throws PwmUnrecoverableException
     {
-        final AuditRecordFactory auditRecordFactory = new AuditRecordFactory( pwmApplication, pwmSession.getSessionManager().getMacroMachine( pwmApplication ) );
+        final AuditRecordFactory auditRecordFactory = new AuditRecordFactory( pwmApplication, pwmSession.getSessionManager().getMacroMachine( ) );
         final UserAuditRecord auditRecord = auditRecordFactory.createUserAuditRecord( auditEvent, userInfo, pwmSession );
         submit( auditRecord );
     }
@@ -355,7 +355,7 @@ public class AuditService implements PwmService
 
         if ( auditRecord.getEventCode() == null )
         {
-            LOGGER.error( "discarding audit event, missing event type; event=" + jsonRecord );
+            LOGGER.error( () -> "discarding audit event, missing event type; event=" + jsonRecord );
             return;
         }
 
@@ -375,9 +375,9 @@ public class AuditService implements PwmService
             {
                 auditVault.add( auditRecord );
             }
-            catch ( PwmOperationalException e )
+            catch ( final PwmOperationalException e )
             {
-                LOGGER.warn( "discarding audit event due to storage error: " + e.getMessage() );
+                LOGGER.warn( () -> "discarding audit event due to storage error: " + e.getMessage() );
             }
         }
 
@@ -408,7 +408,7 @@ public class AuditService implements PwmService
             {
                 syslogManager.add( auditRecord );
             }
-            catch ( PwmOperationalException e )
+            catch ( final PwmOperationalException e )
             {
                 lastError = e.getErrorInformation();
             }

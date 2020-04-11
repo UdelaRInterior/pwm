@@ -109,7 +109,7 @@ public class LocalDbAuditVault implements AuditVault
 
     private static class IteratorWrapper implements Iterator<AuditRecord>
     {
-        private Iterator<String> innerIter;
+        private final Iterator<String> innerIter;
 
         private IteratorWrapper( final Iterator<String> innerIter )
         {
@@ -162,10 +162,11 @@ public class LocalDbAuditVault implements AuditVault
                     {
                         event = AuditEvent.valueOf( eventCode );
                     }
-                    catch ( IllegalArgumentException e )
+                    catch ( final IllegalArgumentException e )
                     {
                         errorMsg = "error de-serializing audit record: " + e.getMessage();
-                        LOGGER.error( errorMsg );
+                        final String errorMsgFinal = errorMsg;
+                        LOGGER.error( () -> errorMsgFinal );
                         return null;
                     }
                     final Class clazz = event.getType().getDataClass();
@@ -174,7 +175,7 @@ public class LocalDbAuditVault implements AuditVault
                 }
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             errorMsg = e.getMessage();
         }

@@ -102,10 +102,10 @@ public class PwmServiceManager
             final Object newInstance = serviceClass.newInstance();
             newServiceInstance = ( PwmService ) newInstance;
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMsg = "unexpected error instantiating service class '" + serviceName + "', error: " + e.toString();
-            LOGGER.fatal( errorMsg, e );
+            LOGGER.fatal( () -> errorMsg, e );
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_STARTUP_ERROR, errorMsg ) );
         }
 
@@ -116,18 +116,19 @@ public class PwmServiceManager
             final TimeDuration startupDuration = TimeDuration.fromCurrent( startTime );
             LOGGER.debug( () -> "completed initialization of service " + serviceName + " in " + startupDuration.asCompactString() + ", status=" + newServiceInstance.status() );
         }
-        catch ( PwmException e )
+        catch ( final PwmException e )
         {
-            LOGGER.warn( "error instantiating service class '" + serviceName + "', service will remain unavailable, error: " + e.getMessage() );
+            LOGGER.warn( () -> "error instantiating service class '" + serviceName + "', service will remain unavailable, error: " + e.getMessage() );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             String errorMsg = "unexpected error instantiating service class '" + serviceName + "', cannot load, error: " + e.getMessage();
             if ( e.getCause() != null )
             {
                 errorMsg += ", cause: " + e.getCause();
             }
-            LOGGER.fatal( errorMsg );
+            final String errorMsgFinal = errorMsg;
+            LOGGER.fatal( () -> errorMsgFinal );
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_STARTUP_ERROR, errorMsg ) );
         }
         return newServiceInstance;
@@ -170,9 +171,9 @@ public class PwmServiceManager
             final TimeDuration timeDuration = TimeDuration.fromCurrent( startTime );
             LOGGER.trace( () -> "successfully closed service " + serviceClass.getName() + " (" + timeDuration.asCompactString() + ")" );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error closing " + loopService.getClass().getSimpleName() + ": " + e.getMessage(), e );
+            LOGGER.error( () -> "error closing " + loopService.getClass().getSimpleName() + ": " + e.getMessage(), e );
         }
     }
 

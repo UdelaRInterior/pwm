@@ -134,7 +134,7 @@ public class LoginServlet extends ControlledPwmServlet
         {
             handleLoginRequest( pwmRequest, valueMap, passwordOnly );
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
             setLastError( pwmRequest, e.getErrorInformation() );
             forwardToJSP( pwmRequest, passwordOnly );
@@ -164,7 +164,7 @@ public class LoginServlet extends ControlledPwmServlet
         {
             handleLoginRequest( pwmRequest, valueMap, passwordOnly );
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
             final ErrorInformation errorInformation = e.getErrorInformation();
             LOGGER.trace( pwmRequest, () -> "returning rest login error to client: " + errorInformation.toDebugStr() );
@@ -240,7 +240,7 @@ public class LoginServlet extends ControlledPwmServlet
 
         final SessionAuthenticator sessionAuthenticator = new SessionAuthenticator(
                 pwmRequest.getPwmApplication(),
-                pwmRequest.getPwmSession(),
+                pwmRequest,
                 PwmAuthenticationSource.LOGIN_FORM
         );
 

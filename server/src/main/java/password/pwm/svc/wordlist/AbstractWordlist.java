@@ -37,6 +37,7 @@ import password.pwm.util.PwmScheduler;
 import password.pwm.util.java.JavaHelper;
 import password.pwm.util.java.JsonUtil;
 import password.pwm.util.java.Percent;
+import password.pwm.util.java.PwmCallable;
 import password.pwm.util.java.TimeDuration;
 import password.pwm.util.logging.PwmLogger;
 
@@ -110,7 +111,7 @@ abstract class AbstractWordlist implements Wordlist, PwmService
             {
                 wlStatus = STATUS.CLOSED;
                 final String errorMsg = "LocalDB is not available, will remain closed";
-                getLogger().warn( errorMsg );
+                getLogger().warn( () -> errorMsg );
                 lastError = new ErrorInformation( PwmError.ERROR_SERVICE_NOT_AVAILABLE, errorMsg );
             }
 
@@ -192,7 +193,7 @@ abstract class AbstractWordlist implements Wordlist, PwmService
     private boolean realBucketCheck( final String word, final WordType wordType )
             throws PwmUnrecoverableException
     {
-        getStatistics().getWordChecks().incrementAndGet();
+        getStatistics().getWordChecks().next();
 
         final Instant startTime = Instant.now();
         final boolean isContainsWord = wordlistBucket.containsWord( word );
@@ -207,11 +208,11 @@ abstract class AbstractWordlist implements Wordlist, PwmService
 
         if ( isContainsWord )
         {
-            getStatistics().getWordTypeHits().get( wordType ).incrementAndGet();
+            getStatistics().getWordTypeHits().get( wordType ).next();
         }
         else
         {
-            getStatistics().getMisses().incrementAndGet();
+            getStatistics().getMisses().next();
         }
 
         return isContainsWord;
@@ -245,9 +246,9 @@ abstract class AbstractWordlist implements Wordlist, PwmService
         {
             return wordlistBucket.size();
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
-            getLogger().error( "error reading size: " + e.getMessage() );
+            getLogger().error( () -> "error reading size: " + e.getMessage() );
         }
 
         return -1;
@@ -266,7 +267,7 @@ abstract class AbstractWordlist implements Wordlist, PwmService
             JavaHelper.closeAndWaitExecutor( executorService, closeWaitTime );
             if ( backgroundImportRunning.get() )
             {
-                getLogger().warn( "background thread still running after waiting " + closeWaitTime.asCompactString() );
+                getLogger().warn( () -> "background thread still running after waiting " + closeWaitTime.asCompactString() );
             }
         }
     }
@@ -392,11 +393,6 @@ abstract class AbstractWordlist implements Wordlist, PwmService
         executorService.execute( new InspectorJob() );
     }
 
-    private interface PwmCallable
-    {
-        void call() throws PwmUnrecoverableException;
-    }
-
     private void cancelBackgroundAndRunImmediate( final PwmCallable runnable ) throws PwmUnrecoverableException
     {
         inhibitBackgroundImportFlag.set( true );
@@ -434,9 +430,9 @@ abstract class AbstractWordlist implements Wordlist, PwmService
                     activity = Wordlist.Activity.Idle;
                 }
             }
-            catch ( Throwable t )
+            catch ( final Throwable t )
             {
-                getLogger().error( "error running InspectorJob: " + t.getMessage(), t );
+                getLogger().error( () -> "error running InspectorJob: " + t.getMessage(), t );
                 throw t;
             }
             finally

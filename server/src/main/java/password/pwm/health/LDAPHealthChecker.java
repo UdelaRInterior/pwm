@@ -53,12 +53,14 @@ import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.ldap.LdapOperationsHelper;
 import password.pwm.ldap.UserInfo;
 import password.pwm.ldap.UserInfoFactory;
+import password.pwm.ldap.search.SearchConfiguration;
 import password.pwm.util.PasswordData;
 import password.pwm.util.i18n.LocaleHelper;
 import password.pwm.util.java.JavaHelper;
 import password.pwm.util.java.StringUtil;
 import password.pwm.util.java.TimeDuration;
 import password.pwm.util.logging.PwmLogger;
+import password.pwm.util.macro.MacroMachine;
 import password.pwm.util.password.PasswordUtility;
 import password.pwm.util.password.RandomPasswordGenerator;
 import password.pwm.ws.server.rest.bean.HealthData;
@@ -150,6 +152,8 @@ public class LDAPHealthChecker implements HealthChecker
                 returnRecords.addAll( checkLdapDNSyntaxValues( pwmApplication ) );
 
                 returnRecords.addAll( checkNewUserPasswordTemplateSetting( pwmApplication, config ) );
+
+     //           returnRecords.addAll( checkUserSearching( pwmApplication ) );
             }
         }
 
@@ -179,7 +183,7 @@ public class LDAPHealthChecker implements HealthChecker
             testUserDN = ldapProfile.readCanonicalDN( pwmApplication, testUserDN );
             proxyUserDN = ldapProfile.readCanonicalDN( pwmApplication, proxyUserDN );
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             final String msgString = e.getMessage();
             LOGGER.trace( SessionLabel.HEALTH_SESSION_LABEL, () -> "unexpected error while testing test user (during object creation): message="
@@ -220,7 +224,7 @@ public class LDAPHealthChecker implements HealthChecker
                 theUser = chaiProvider.getEntryFactory().newChaiUser( testUserDN );
 
             }
-            catch ( ChaiUnavailableException e )
+            catch ( final ChaiUnavailableException e )
             {
                 returnRecords.add( HealthRecord.forMessage( HealthMessage.LDAP_TestUserUnavailable,
                         PwmSetting.LDAP_TEST_USER_DN.toMenuLocationDebug( ldapProfile.getIdentifier(), PwmConstants.DEFAULT_LOCALE ),
@@ -228,7 +232,7 @@ public class LDAPHealthChecker implements HealthChecker
                 ) );
                 return returnRecords;
             }
-            catch ( Throwable e )
+            catch ( final Throwable e )
             {
                 final String msgString = e.getMessage();
                 LOGGER.trace(
@@ -247,7 +251,7 @@ public class LDAPHealthChecker implements HealthChecker
             {
                 theUser.readObjectClass();
             }
-            catch ( ChaiException e )
+            catch ( final ChaiException e )
             {
                 returnRecords.add( HealthRecord.forMessage( HealthMessage.LDAP_TestUserError,
                         PwmSetting.LDAP_TEST_USER_DN.toMenuLocationDebug( ldapProfile.getIdentifier(), PwmConstants.DEFAULT_LOCALE ),
@@ -272,7 +276,7 @@ public class LDAPHealthChecker implements HealthChecker
                     {
                         theUser.readPassword();
                     }
-                    catch ( Exception e )
+                    catch ( final Exception e )
                     {
                         LOGGER.debug( SessionLabel.HEALTH_SESSION_LABEL, () -> "error reading user password from directory " + e.getMessage() );
                         returnRecords.add( HealthRecord.forMessage( HealthMessage.LDAP_TestUserReadPwError,
@@ -337,7 +341,7 @@ public class LDAPHealthChecker implements HealthChecker
                             theUser.setPassword( newPassword.getStringValue() );
                             LOGGER.debug( SessionLabel.HEALTH_SESSION_LABEL, () -> "set random password on test user " + userIdentity.toDisplayString() );
                         }
-                        catch ( ChaiException e )
+                        catch ( final ChaiException e )
                         {
                             returnRecords.add( HealthRecord.forMessage( HealthMessage.LDAP_TestUserWritePwError,
                                     PwmSetting.LDAP_TEST_USER_DN.toMenuLocationDebug( ldapProfile.getIdentifier(), PwmConstants.DEFAULT_LOCALE ),
@@ -349,10 +353,10 @@ public class LDAPHealthChecker implements HealthChecker
                     }
                 }
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 final String msg = "error setting test user password: " + JavaHelper.readHostileExceptionMessage( e );
-                LOGGER.error( SessionLabel.HEALTH_SESSION_LABEL, msg, e );
+                LOGGER.error( SessionLabel.HEALTH_SESSION_LABEL, () -> msg, e );
                 returnRecords.add( HealthRecord.forMessage( HealthMessage.LDAP_TestUserUnexpected,
                         PwmSetting.LDAP_TEST_USER_DN.toMenuLocationDebug( ldapProfile.getIdentifier(), PwmConstants.DEFAULT_LOCALE ),
                         msg
@@ -382,7 +386,7 @@ public class LDAPHealthChecker implements HealthChecker
                 userInfo.getUserEmailAddress();
                 userInfo.getUserSmsNumber();
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
                 returnRecords.add( new HealthRecord(
                         HealthStatus.WARN,
@@ -400,7 +404,7 @@ public class LDAPHealthChecker implements HealthChecker
                 {
                     chaiProvider.close();
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
                     // ignore
                 }
@@ -438,7 +442,7 @@ public class LDAPHealthChecker implements HealthChecker
                 final ChaiUser proxyUser = chaiProvider.getEntryFactory().newChaiUser( proxyDN );
                 proxyUser.exists();
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 final String errorString = "error connecting to ldap server '" + loopURL + "': " + e.getMessage();
                 returnRecords.add( new HealthRecord(
@@ -454,7 +458,7 @@ public class LDAPHealthChecker implements HealthChecker
                     {
                         chaiProvider.close();
                     }
-                    catch ( Exception e )
+                    catch ( final Exception e )
                     {
                         /* ignore */
                     }
@@ -512,7 +516,7 @@ public class LDAPHealthChecker implements HealthChecker
                 }
 
             }
-            catch ( ChaiException e )
+            catch ( final ChaiException e )
             {
                 final ChaiError chaiError = ChaiErrors.getErrorForMessage( e.getMessage() );
                 final PwmError pwmError = PwmError.forChaiError( chaiError );
@@ -538,7 +542,7 @@ public class LDAPHealthChecker implements HealthChecker
                         new ErrorInformation( PwmError.ERROR_DIRECTORY_UNAVAILABLE, errorString.toString() ) );
                 return returnRecords;
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 final HealthRecord record = HealthRecord.forMessage( HealthMessage.LDAP_No_Connection, e.getMessage() );
                 returnRecords.add( record );
@@ -567,7 +571,7 @@ public class LDAPHealthChecker implements HealthChecker
                             returnRecords.add( new HealthRecord( HealthStatus.WARN, makeLdapTopic( ldapProfile, config ), errorString ) );
                         }
                     }
-                    catch ( Exception e )
+                    catch ( final Exception e )
                     {
                         final String errorString = "ldap root context '" + loopContext + "' is not valid: " + e.getMessage();
                         returnRecords.add( new HealthRecord( HealthStatus.WARN, makeLdapTopic( ldapProfile, config ), errorString ) );
@@ -583,7 +587,7 @@ public class LDAPHealthChecker implements HealthChecker
                 {
                     chaiProvider.close();
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
                     /* ignore */
                 }
@@ -619,7 +623,7 @@ public class LDAPHealthChecker implements HealthChecker
                     ) );
                 }
             }
-            catch ( MalformedURLException | UnknownHostException e )
+            catch ( final MalformedURLException | UnknownHostException e )
             {
                 returnList.add( HealthRecord.forMessage(
                         HealthMessage.Config_ParseError,
@@ -695,10 +699,10 @@ public class LDAPHealthChecker implements HealthChecker
                 }
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             errorReachingServer = true;
-            LOGGER.error( SessionLabel.HEALTH_SESSION_LABEL, "error during replica vendor sameness check: " + e.getMessage() );
+            LOGGER.error( SessionLabel.HEALTH_SESSION_LABEL, () -> "error during replica vendor sameness check: " + e.getMessage() );
         }
 
         final ArrayList<HealthRecord> healthRecords = new ArrayList<>();
@@ -721,7 +725,7 @@ public class LDAPHealthChecker implements HealthChecker
             // cache the error
             healthProperties.put( HealthMonitor.HealthMonitorFlag.LdapVendorSameCheck, healthRecords );
 
-            LOGGER.warn( SessionLabel.HEALTH_SESSION_LABEL, "multiple ldap vendors found: " + vendorMsg.toString() );
+            LOGGER.warn( SessionLabel.HEALTH_SESSION_LABEL, () -> "multiple ldap vendors found: " + vendorMsg.toString() );
         }
         else if ( discoveredVendors.size() == 1 )
         {
@@ -788,16 +792,16 @@ public class LDAPHealthChecker implements HealthChecker
                                 url
                         );
                         healthRecords.add( record );
-                        LOGGER.warn( record.toDebugString( PwmConstants.DEFAULT_LOCALE, pwmApplication.getConfig() ) );
+                        LOGGER.warn( () -> record.toDebugString( PwmConstants.DEFAULT_LOCALE, pwmApplication.getConfig() ) );
                     }
                 }
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             errorReachingServer = true;
             LOGGER.error( SessionLabel.HEALTH_SESSION_LABEL,
-                    "error during ad api password policy (asn " + PwmConstants.LDAP_AD_PASSWORD_POLICY_CONTROL_ASN + ") check: " + e.getMessage() );
+                    () ->  "error during ad api password policy (asn " + PwmConstants.LDAP_AD_PASSWORD_POLICY_CONTROL_ASN + ") check: " + e.getMessage() );
         }
 
         if ( !errorReachingServer && pwmApplication.getHealthMonitor() != null )
@@ -826,9 +830,9 @@ public class LDAPHealthChecker implements HealthChecker
                         {
                             returnList.addAll( checkUserPermission( pwmApplication, userPermission, pwmSetting ) );
                         }
-                        catch ( PwmUnrecoverableException e )
+                        catch ( final PwmUnrecoverableException e )
                         {
-                            LOGGER.error( "error checking configured permission settings:" + e.getMessage() );
+                            LOGGER.error( () -> "error checking configured permission settings:" + e.getMessage() );
                         }
                     }
                 }
@@ -884,9 +888,9 @@ public class LDAPHealthChecker implements HealthChecker
                 }
             }
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
-            LOGGER.warn( "error while checking DN ldap syntax values: " + e.getMessage() );
+            LOGGER.warn( () -> "error while checking DN ldap syntax values: " + e.getMessage() );
         }
 
         return returnList;
@@ -946,20 +950,63 @@ public class LDAPHealthChecker implements HealthChecker
                         );
                     }
                 }
-                catch ( ChaiUnavailableException e )
+                catch ( final ChaiUnavailableException e )
                 {
                     throw PwmUnrecoverableException.fromChaiException( e );
                 }
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
-                LOGGER.error( "error checking new user password policy user settings:" + e.getMessage() );
+                LOGGER.error( () -> "error checking new user password policy user settings:" + e.getMessage() );
             }
         }
 
         return Collections.emptyList();
     }
 
+    private static List<HealthRecord> checkUserSearching(
+            final PwmApplication pwmApplication
+    )
+    {
+        final TimeDuration warnDuration = TimeDuration.of(
+                JavaHelper.silentParseLong( pwmApplication.getConfig().readAppProperty( AppProperty.HEALTH_LDAP_USER_SEARCH_WARN_MS ), 10_1000 ),
+                TimeDuration.Unit.MILLISECONDS );
+
+        final Instant startTime = Instant.now();
+
+
+        try
+        {
+            final String healthUsername = MacroMachine.forStatic().expandMacros( pwmApplication.getConfig().readAppProperty( AppProperty.HEALTH_LDAP_USER_SEARCH_TERM ) );
+
+            final SearchConfiguration searchConfiguration = SearchConfiguration.builder()
+                    .enableValueEscaping( false )
+                    .searchTimeout( warnDuration.asMillis() )
+                    .username( healthUsername )
+                    .build();
+
+            pwmApplication.getUserSearchEngine().performMultiUserSearch( searchConfiguration, 1, Collections.singletonList( "cn" ), SessionLabel.HEALTH_SESSION_LABEL );
+        }
+        catch ( final Exception e )
+        {
+            return Collections.singletonList(
+                    HealthRecord.forMessage( HealthMessage.LDAP_SearchFailure,
+                            e.getMessage()
+                    ) );
+        }
+
+        final TimeDuration timeDuration = TimeDuration.fromCurrent( startTime );
+
+        if ( timeDuration.isLongerThan( warnDuration ) )
+        {
+            return Collections.singletonList(
+                    HealthRecord.forMessage( HealthMessage.LDAP_SearchFailure,
+                            "user search time of " + timeDuration.asLongString() + " exceeded ideal of " + warnDuration.asLongString(  )
+                    ) );
+        }
+
+        return Collections.emptyList();
+    }
 
     private static List<HealthRecord> checkUserPermission(
             final PwmApplication pwmApplication,
@@ -1065,13 +1112,13 @@ public class LDAPHealthChecker implements HealthChecker
                 }
             }
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             throw PwmUnrecoverableException.fromChaiException( e );
         }
-        catch ( ChaiException e )
+        catch ( final ChaiException e )
         {
-            LOGGER.error( "error while evaluating ldap DN '" + dnValue + "', error: " + e.getMessage() );
+            LOGGER.error( () -> "error while evaluating ldap DN '" + dnValue + "', error: " + e.getMessage() );
         }
         return Optional.empty();
     }
@@ -1109,7 +1156,7 @@ public class LDAPHealthChecker implements HealthChecker
     )
             throws PwmUnrecoverableException
     {
-        final PwmApplication tempApplication = new PwmApplication( pwmApplication.getPwmEnvironment().makeRuntimeInstance( config ) );
+        final PwmApplication tempApplication = PwmApplication.createPwmApplication( pwmApplication.getPwmEnvironment().makeRuntimeInstance( config ) );
         final LDAPHealthChecker ldapHealthChecker = new LDAPHealthChecker();
         final List<HealthRecord> profileRecords = new ArrayList<>();
 

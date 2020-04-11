@@ -284,12 +284,11 @@ public class PwmScheduler
                 else
                 {
                     hasFailed = true;
-                    LOGGER.trace( () -> "skipping scheduled job " + runnable + " on shutdown executor + " + executor );
                 }
             }
-            catch ( Throwable t )
+            catch ( final Throwable t )
             {
-                LOGGER.error( "unexpected error running scheduled job: " + t.getMessage(), t );
+                LOGGER.error( () -> "unexpected error running scheduled job: " + t.getMessage(), t );
                 hasFailed = true;
             }
 

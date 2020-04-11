@@ -50,7 +50,7 @@ public abstract class JspUtility
         final PwmRequest pwmRequest = ( PwmRequest ) request.getAttribute( PwmRequestAttribute.PwmRequest.toString() );
         if ( pwmRequest == null )
         {
-            LOGGER.warn( "unable to load pwmRequest object during jsp execution" );
+            LOGGER.warn( () -> "unable to load pwmRequest object during jsp execution" );
         }
         return pwmRequest;
     }
@@ -62,9 +62,9 @@ public abstract class JspUtility
         {
             return pwmRequest.getPwmApplication().getSessionStateService().getBean( pwmRequest, theClass );
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
-            LOGGER.warn( "unable to load pwmRequest object during jsp execution: " + e.getMessage() );
+            LOGGER.warn( () -> "unable to load pwmRequest object during jsp execution: " + e.getMessage() );
         }
         return null;
     }
@@ -97,9 +97,9 @@ public abstract class JspUtility
                     ( HttpServletResponse ) pageContext.getResponse()
             );
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
-            LOGGER.warn( "unable to load pwmRequest object during jsp execution: " + e.getMessage() );
+            LOGGER.warn( () -> "unable to load pwmRequest object during jsp execution: " + e.getMessage() );
             return;
         }
         if ( pwmRequest != null )
@@ -133,9 +133,9 @@ public abstract class JspUtility
             {
                 return pwmRequest.getConfig().readSettingAsLong( pwmSetting );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.warn( pwmRequest, "error reading number setting " + pwmSetting.getKey() + ", error: " + e.getMessage() );
+                LOGGER.warn( pwmRequest, () -> "error reading number setting " + pwmSetting.getKey() + ", error: " + e.getMessage() );
             }
         }
         return defaultValue;
@@ -145,7 +145,7 @@ public abstract class JspUtility
     {
         final PwmRequest pwmRequest = forRequest( pageContext.getRequest() );
         final PwmLogger logger = PwmLogger.getLogger( "jsp:" + pageContext.getPage().getClass() );
-        logger.error( pwmRequest, message );
+        logger.error( pwmRequest, () -> message );
     }
 
     public static String getMessage( final PageContext pageContext, final PwmDisplayBundle key )

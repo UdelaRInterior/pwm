@@ -57,16 +57,16 @@ public class AuditRecordFactory
         this.macroMachine = macroMachine;
     }
 
-    public AuditRecordFactory( final PwmApplication pwmApplication, final PwmSession pwmSession ) throws PwmUnrecoverableException
+    public AuditRecordFactory( final PwmApplication pwmApplication, final PwmRequest pwmRequest ) throws PwmUnrecoverableException
     {
         this.pwmApplication = pwmApplication;
-        this.macroMachine = pwmSession.getSessionManager().getMacroMachine( pwmApplication );
+        this.macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( );
     }
 
     public AuditRecordFactory( final PwmRequest pwmRequest ) throws PwmUnrecoverableException
     {
         this.pwmApplication = pwmRequest.getPwmApplication();
-        this.macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( pwmApplication );
+        this.macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( );
     }
 
     public HelpdeskAuditRecord createHelpdeskAuditRecord(
@@ -177,8 +177,8 @@ public class AuditRecordFactory
                 eventCode,
                 perpetrator,
                 message,
-                sessionLabel != null ? sessionLabel.getSrcAddress() : null,
-                sessionLabel != null ? sessionLabel.getSrcHostname() : null
+                sessionLabel != null ? sessionLabel.getSourceAddress() : null,
+                sessionLabel != null ? sessionLabel.getSourceHostname() : null
         );
     }
 
@@ -240,9 +240,9 @@ public class AuditRecordFactory
                 );
                 userID = userInfo.getUsername();
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.warn( "unable to read userID for " + userIdentity + ", error: " + e.getMessage() );
+                LOGGER.warn( () -> "unable to read userID for " + userIdentity + ", error: " + e.getMessage() );
             }
         }
 

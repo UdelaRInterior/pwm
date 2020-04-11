@@ -177,18 +177,13 @@ public class IdleTimeoutCalculator
         }
     }
 
-    public static TimeDuration idleTimeoutForRequest( final PwmRequest pwmRequest ) throws PwmUnrecoverableException
-    {
-        return idleTimeoutForRequest( pwmRequest.getURL(), pwmRequest.getPwmApplication(), pwmRequest.getPwmSession() );
-    }
-
-    public static TimeDuration idleTimeoutForRequest(
-            final PwmURL pwmURL,
-            final PwmApplication pwmApplication,
-            final PwmSession pwmSession
-    )
+    public static TimeDuration idleTimeoutForRequest( final PwmRequest pwmRequest )
             throws PwmUnrecoverableException
     {
+        final PwmURL pwmURL = pwmRequest.getURL();
+        final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
+        final PwmSession pwmSession = pwmRequest.getPwmSession();
+
         if ( pwmURL.isResourceURL() )
         {
             return figureMaxSessionTimeout( pwmApplication, pwmSession ).getIdleTimeout();
@@ -199,7 +194,7 @@ public class IdleTimeoutCalculator
         {
             if ( config.readSettingAsBoolean( PwmSetting.HELPDESK_ENABLE ) )
             {
-                final HelpdeskProfile helpdeskProfile = pwmSession.getSessionManager().getHelpdeskProfile( pwmApplication );
+                final HelpdeskProfile helpdeskProfile = pwmSession.getSessionManager().getHelpdeskProfile( );
                 if ( helpdeskProfile != null )
                 {
                     final long helpdeskIdleTimeout = helpdeskProfile.readSettingAsLong( PwmSetting.HELPDESK_IDLE_TIMEOUT_SECONDS );
@@ -219,7 +214,7 @@ public class IdleTimeoutCalculator
                         && pwmURL.isPrivateUrl()
                 )
         {
-            final PeopleSearchProfile peopleSearchProfile = pwmSession.getSessionManager().getPeopleSearchProfile( pwmApplication );
+            final PeopleSearchProfile peopleSearchProfile = pwmSession.getSessionManager().getPeopleSearchProfile( );
             if ( peopleSearchProfile != null )
             {
                 final long peopleSearchIdleTimeout = peopleSearchProfile.readSettingAsLong( PwmSetting.PEOPLE_SEARCH_IDLE_TIMEOUT_SECONDS );
@@ -243,9 +238,9 @@ public class IdleTimeoutCalculator
                     }
                 }
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
-                LOGGER.error( pwmSession, "error while figuring max idle timeout for session: " + e.getMessage() );
+                LOGGER.error( pwmRequest, () -> "error while figuring max idle timeout for session: " + e.getMessage() );
             }
         }
 

@@ -33,6 +33,7 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import password.pwm.AppAttribute;
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
@@ -40,13 +41,14 @@ import password.pwm.bean.PrivateKeyCertificate;
 import password.pwm.config.Configuration;
 import password.pwm.config.PwmSetting;
 import password.pwm.config.StoredValue;
-import password.pwm.config.stored.StoredConfiguration;
+import password.pwm.config.stored.StoredConfigurationModifier;
 import password.pwm.config.value.PrivateKeyValue;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.util.PasswordData;
 import password.pwm.util.java.JsonUtil;
+import password.pwm.util.java.PwmDateFormat;
 import password.pwm.util.java.StringUtil;
 import password.pwm.util.logging.PwmLogger;
 
@@ -67,7 +69,7 @@ import java.security.PrivateKey;
 import java.security.SecureRandom;
 import java.security.Security;
 import java.security.cert.X509Certificate;
-import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -79,9 +81,9 @@ public class HttpsServerCertificateManager
 {
     private static final PwmLogger LOGGER = PwmLogger.forClass( HttpsServerCertificateManager.class );
 
-    private static boolean bouncyCastleInitialized;
+    private static volatile boolean bouncyCastleInitialized;
 
-    private static void initBouncyCastleProvider( )
+    private static synchronized void initBouncyCastleProvider( )
     {
         if ( !bouncyCastleInitialized )
         {
@@ -98,8 +100,7 @@ public class HttpsServerCertificateManager
     )
             throws PwmUnrecoverableException
     {
-        KeyStore keyStore = null;
-        keyStore = exportKey( pwmApplication.getConfig(), KeyStoreFormat.JKS, passwordData, alias );
+        KeyStore keyStore = exportKey( pwmApplication.getConfig(), KeyStoreFormat.JKS, passwordData, alias );
 
         if ( keyStore == null )
         {
@@ -141,7 +142,7 @@ public class HttpsServerCertificateManager
             );
             return keyStore;
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.CONFIG_FORMAT_ERROR, "error generating keystore file;: " + e.getMessage() ) );
         }
@@ -157,7 +158,7 @@ public class HttpsServerCertificateManager
             final SelfCertGenerator selfCertGenerator = new SelfCertGenerator( configuration );
             return selfCertGenerator.makeSelfSignedCert( pwmApplication, password, alias );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_CERTIFICATE_ERROR, "unable to generate self signed certificate: " + e.getMessage() ) );
         }
@@ -210,7 +211,7 @@ public class HttpsServerCertificateManager
             final String cnName = makeSubjectName();
             final KeyStore keyStore = KeyStore.getInstance( "jks" );
             keyStore.load( null, password.getStringValue().toCharArray() );
-            StoredCertData storedCertData = pwmApplication.readAppAttribute( PwmApplication.AppAttribute.HTTPS_SELF_CERT, StoredCertData.class );
+            StoredCertData storedCertData = pwmApplication.readAppAttribute( AppAttribute.HTTPS_SELF_CERT, StoredCertData.class );
             if ( storedCertData != null )
             {
                 if ( !cnName.equals( storedCertData.getX509Certificate().getSubjectDN().getName() ) )
@@ -233,7 +234,7 @@ public class HttpsServerCertificateManager
             if ( storedCertData == null )
             {
                 storedCertData = makeSelfSignedCert( cnName );
-                pwmApplication.writeAppAttribute( PwmApplication.AppAttribute.HTTPS_SELF_CERT, storedCertData );
+                pwmApplication.writeAppAttribute( AppAttribute.HTTPS_SELF_CERT, storedCertData );
             }
 
             keyStore.setKeyEntry(
@@ -264,7 +265,7 @@ public class HttpsServerCertificateManager
                             cnName = uri.getHost();
                         }
                     }
-                    catch ( URISyntaxException e )
+                    catch ( final URISyntaxException e )
                     {
                         // disregard
                     }
@@ -293,9 +294,8 @@ public class HttpsServerCertificateManager
             final X500NameBuilder subjectName = new X500NameBuilder( BCStyle.INSTANCE );
             subjectName.addRDN( BCStyle.CN, cnValue );
 
-            final SimpleDateFormat formatter = new SimpleDateFormat( "yyyyMMddhhmmss" );
-            final String serNumStr = formatter.format( new Date( System.currentTimeMillis() ) );
-            final BigInteger serialNumber = new BigInteger( serNumStr );
+            final BigInteger serialNumber = makeSerialNumber();
+
 
             // 2 days in the past
             final Date notBefore = new Date( System.currentTimeMillis() - TimeUnit.DAYS.toMillis( 2 ) );
@@ -334,6 +334,13 @@ public class HttpsServerCertificateManager
             return new JcaX509CertificateConverter().setProvider( "BC" ).getCertificate( certGen.build( sigGen ) );
         }
 
+        private static BigInteger makeSerialNumber()
+        {
+            final PwmDateFormat formatter = PwmDateFormat.newPwmDateFormat( "yyyyMMddhhmmss" );
+            final String serNumStr = formatter.format( Instant.now() );
+            return new BigInteger( serNumStr );
+        }
+
         static KeyPair generateRSAKeyPair( final Configuration config )
                 throws Exception
         {
@@ -353,12 +360,13 @@ public class HttpsServerCertificateManager
     }
 
     public static void importKey(
-            final StoredConfiguration storedConfiguration,
+            final StoredConfigurationModifier storedConfiguration,
             final KeyStoreFormat keyStoreFormat,
             final InputStream inputStream,
             final PasswordData password,
             final String alias
-    ) throws PwmUnrecoverableException
+    )
+            throws PwmUnrecoverableException
     {
         final char[] charPassword = password == null ? new char[ 0 ] : password.getStringValue().toCharArray();
         final PrivateKeyCertificate privateKeyCertificate;
@@ -370,9 +378,9 @@ public class HttpsServerCertificateManager
             final String effectiveAlias;
             {
                 final List<String> allAliases = new ArrayList<>();
-                for ( final Enumeration enu = keyStore.aliases(); enu.hasMoreElements(); )
+                for ( final Enumeration<String> aliasEnum = keyStore.aliases(); aliasEnum.hasMoreElements(); )
                 {
-                    final String value = ( String ) enu.nextElement();
+                    final String value = aliasEnum.nextElement();
                     allAliases.add( value );
                 }
                 effectiveAlias = allAliases.size() == 1 ? allAliases.iterator().next() : alias;
@@ -399,7 +407,7 @@ public class HttpsServerCertificateManager
             LOGGER.debug( () -> "importing certificate chain: " + JsonUtil.serializeCollection( X509Utils.makeDebugInfoMap( certificates ) ) );
             privateKeyCertificate = new PrivateKeyCertificate( certificates, key );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMsg = "unable to load configured https certificate: " + e.getMessage();
             final String[] errorDetail = new String[]
@@ -410,7 +418,7 @@ public class HttpsServerCertificateManager
         }
 
         final StoredValue storedValue = new PrivateKeyValue( privateKeyCertificate );
-        storedConfiguration.writeSetting( PwmSetting.HTTPS_CERT, storedValue, null );
+        storedConfiguration.writeSetting( PwmSetting.HTTPS_CERT, null, storedValue, null );
     }
 
 }

@@ -61,15 +61,15 @@ public class ApplicationModeFilter extends AbstractPwmFilter
                     return;
                 }
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
                 if ( e.getError() == PwmError.ERROR_INTERNAL )
                 {
                     try
                     {
-                        LOGGER.error( e.getMessage() );
+                        LOGGER.error( () -> e.getMessage() );
                     }
-                    catch ( Exception ignore )
+                    catch ( final Exception ignore )
                     {
                         /* noop */
                     }

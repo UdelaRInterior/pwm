@@ -20,32 +20,24 @@
 
 package password.pwm.util.localdb;
 
-import password.pwm.PwmApplication;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
-import password.pwm.svc.stats.EpsStatistic;
 
 import java.io.File;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 
 public class LocalDBAdaptor implements LocalDB
 {
     private final LocalDBProvider innerDB;
+    private final LocalDBStatistics localDBStatistics = new LocalDBStatistics();
 
-    private final PwmApplication pwmApplication;
-
-    LocalDBAdaptor( final LocalDBProvider innerDB, final PwmApplication pwmApplication )
+    LocalDBAdaptor( final LocalDBProvider innerDB )
     {
-        this.pwmApplication = pwmApplication;
-        if ( innerDB == null )
-        {
-            throw new IllegalArgumentException( "innerDB can not be null" );
-        }
-
+        Objects.requireNonNull( innerDB );
         this.innerDB = innerDB;
-
     }
 
     public File getFileLocation( )
@@ -86,7 +78,7 @@ public class LocalDBAdaptor implements LocalDB
         innerDB.init( dbDirectory, initParameters, parameters );
     }
 
-    public LocalDBIterator<String> iterator( final DB db ) throws LocalDBException
+    public LocalDBIterator<Map.Entry<String, String>> iterator( final DB db ) throws LocalDBException
     {
         ParameterValidator.validateDBValue( db );
         return innerDB.iterator( db );
@@ -110,11 +102,11 @@ public class LocalDBAdaptor implements LocalDB
                 ParameterValidator.validateKeyValue( loopKey );
                 ParameterValidator.validateValueValue( loopValue );
             }
-            catch ( NullPointerException e )
+            catch ( final NullPointerException e )
             {
                 throw new NullPointerException( e.getMessage() + " for transaction record: '" + loopKey + "'" );
             }
-            catch ( IllegalArgumentException e )
+            catch ( final IllegalArgumentException e )
             {
                 throw new IllegalArgumentException( e.getMessage() + " for transaction record: '" + loopKey + "'" );
             }
@@ -171,11 +163,11 @@ public class LocalDBAdaptor implements LocalDB
             {
                 ParameterValidator.validateValueValue( loopKey );
             }
-            catch ( NullPointerException e )
+            catch ( final NullPointerException e )
             {
                 throw new NullPointerException( e.getMessage() + " for transaction record: '" + loopKey + "'" );
             }
-            catch ( IllegalArgumentException e )
+            catch ( final IllegalArgumentException e )
             {
                 throw new IllegalArgumentException( e.getMessage() + " for transaction record: '" + loopKey + "'" );
             }
@@ -259,23 +251,11 @@ public class LocalDBAdaptor implements LocalDB
 
     private void markRead()
     {
-        if ( pwmApplication != null )
-        {
-            if ( pwmApplication.getStatisticsManager() != null )
-            {
-                pwmApplication.getStatisticsManager().updateEps( EpsStatistic.PWMDB_READS, 1 );
-            }
-        }
+       this.localDBStatistics.getReadOperations().incrementAndGet();
     }
 
     private void markWrite( final int events )
     {
-        if ( pwmApplication != null )
-        {
-            if ( pwmApplication.getStatisticsManager() != null )
-            {
-                pwmApplication.getStatisticsManager().updateEps( EpsStatistic.PWMDB_WRITES, events );
-            }
-        }
+        this.localDBStatistics.getWriteOperations().addAndGet( events );
     }
 }

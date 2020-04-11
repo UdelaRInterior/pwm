@@ -70,10 +70,9 @@ public class PasswordData implements Serializable
             newKey = new PwmSecurityKey( randomBytes );
             newKeyHash = SecureEngine.hash( randomBytes, PwmHashAlgorithm.SHA512 );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.fatal( "can't initialize PasswordData handler: " + e.getMessage(), e );
-            e.printStackTrace();
+            LOGGER.fatal( () -> "can't initialize PasswordData handler: " + e.getMessage(), e );
             if ( e instanceof PwmException )
             {
                 newInitializationError = ( ( PwmException ) e ).getErrorInformation();
@@ -172,7 +171,7 @@ public class PasswordData implements Serializable
             final String objValue = ( ( PasswordData ) obj ).getStringValue();
             return ignoreCase ? strValue.equalsIgnoreCase( objValue ) : strValue.equals( objValue );
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             e.printStackTrace();
         }

@@ -34,10 +34,12 @@
         <timestamp.iso>${maven.build.timestamp}</timestamp.iso>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <project.root.basedir>${project.basedir}</project.root.basedir>
         <maven.javadoc.skip>true</maven.javadoc.skip>
 
         <skipTests>false</skipTests>
+
+        <!-- git.commit.time is populated via git-commit-id-plugin and results in a (hopefully) reproducible maven build -->
+        <project.build.outputTimestamp>${git.commit.time}</project.build.outputTimestamp>
     </properties>
 
     <modules>
@@ -69,6 +71,53 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.commonjava.maven.plugins</groupId>
+                <artifactId>directory-maven-plugin</artifactId>
+                <version>0.3.1</version>
+                <executions>
+                    <execution>
+                        <id>project-root-directory</id>
+                        <goals>
+                            <goal>directory-of</goal>
+                        </goals>
+                        <phase>validate</phase>
+                        <configuration>
+                            <property>project.root.basedir</property>
+                            <project>
+                                <groupId>org.pwm-project</groupId>
+                                <artifactId>pwm-parent</artifactId>
+                            </project>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>pl.project13.maven</groupId>
+                <artifactId>git-commit-id-plugin</artifactId>
+                <version>4.0.0</version>
+                <executions>
+                    <execution>
+                        <id>get-the-git-infos</id>
+                        <goals>
+                            <goal>revision</goal>
+                        </goals>
+                        <phase>initialize</phase>
+                    </execution>
+                </executions>
+                <configuration>
+                    <dateFormat>yyyy-MM-dd'T'HH:mm:ss'Z'</dateFormat>
+                    <dateFormatTimeZone>Zulu</dateFormatTimeZone>
+                    <generateGitPropertiesFile>true</generateGitPropertiesFile>
+                    <generateGitPropertiesFilename>${project.build.outputDirectory}/classes/git.json</generateGitPropertiesFilename>
+                    <format>json</format>
+                    <excludeProperties>
+                        <!-- git.build.time is current timestamp so prevents reproducible build -->
+                        <excludeProperty>git.build.time</excludeProperty>
+                    </excludeProperties>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.1.1</version>
@@ -88,10 +137,14 @@
                                     <Implementation-Build-Java-Vendor>${java.vendor}</Implementation-Build-Java-Vendor>
                                     <Implementation-Build-Java-Version>${java.version}</Implementation-Build-Java-Version>
                                     <Implementation-Build>${build.number}</Implementation-Build>
-                                    <Implementation-Build-Timestamp>${timestamp.iso}</Implementation-Build-Timestamp>
                                     <Implementation-Revision>${build.revision}</Implementation-Revision>
                                     <Implementation-Version-Display>v${project.version} b${build.number} r${build.revision}</Implementation-Version-Display>
-                                </manifestEntries>
+                                    <SCM-Git-Branch>${git.branch}</SCM-Git-Branch>
+                                    <SCM-Git-Commit-ID>${git.commit.id}</SCM-Git-Commit-ID>
+                                    <SCM-Git-Commit-ID-Abbrev>${git.commit.id.abbrev}</SCM-Git-Commit-ID-Abbrev>
+                                    <SCM-Git-Commit-ID-Description>${git.commit.id.describe}</SCM-Git-Commit-ID-Description>
+                                    <SCM-Git-Commit-Timestamp>${git.commit.time}</SCM-Git-Commit-Timestamp>
+                                    <SCM-Git-Commit-Dirty>${git.dirty}</SCM-Git-Commit-Dirty>                                </manifestEntries>
                             </archive>
                             <source>8</source>
                         </configuration>
@@ -101,7 +154,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>3.2.1</version>
                 <executions>
                     <execution>
                         <goals>
@@ -120,9 +173,14 @@
                                     <Implementation-Build-Java-Vendor>${java.vendor}</Implementation-Build-Java-Vendor>
                                     <Implementation-Build-Java-Version>${java.version}</Implementation-Build-Java-Version>
                                     <Implementation-Build>${build.number}</Implementation-Build>
-                                    <Implementation-Build-Timestamp>${timestamp.iso}</Implementation-Build-Timestamp>
                                     <Implementation-Revision>${build.revision}</Implementation-Revision>
                                     <Implementation-Version-Display>v${project.version} b${build.number} r${build.revision}</Implementation-Version-Display>
+                                    <SCM-Git-Branch>${git.branch}</SCM-Git-Branch>
+                                    <SCM-Git-Commit-ID>${git.commit.id}</SCM-Git-Commit-ID>
+                                    <SCM-Git-Commit-ID-Abbrev>${git.commit.id.abbrev}</SCM-Git-Commit-ID-Abbrev>
+                                    <SCM-Git-Commit-ID-Description>${git.commit.id.describe}</SCM-Git-Commit-ID-Description>
+                                    <SCM-Git-Commit-Timestamp>${git.commit.time}</SCM-Git-Commit-Timestamp>
+                                    <SCM-Git-Commit-Dirty>${git.dirty}</SCM-Git-Commit-Dirty>
                                 </manifestEntries>
                             </archive>
                         </configuration>
@@ -132,7 +190,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
-                <version>3.0.0-M2</version>
+                <version>3.0.0-M3</version>
                 <executions>
                     <execution>
                         <id>enforce-maven</id>
@@ -152,7 +210,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.0</version>
+                <version>3.8.1</version>
                 <configuration>
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
@@ -161,12 +219,12 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.1.0</version>
+                <version>3.1.1</version>
                 <dependencies>
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>8.25</version>
+                        <version>8.30</version>
                     </dependency>
                 </dependencies>
                 <executions>
@@ -250,7 +308,7 @@
                     <dependency>
                         <groupId>com.github.spotbugs</groupId>
                         <artifactId>spotbugs</artifactId>
-                        <version>4.0.0-beta4</version>
+                        <version>4.0.0</version>
                     </dependency>
                 </dependencies>
                 <configuration>
@@ -268,10 +326,31 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>net.nicoulaj.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.8</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>artifacts</goal>
+                        </goals>
+                        <phase>verify</phase>
+                        <configuration>
+                            <algorithms>
+                                <algorithm>SHA-1</algorithm>
+                            </algorithms>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <!-- put your configurations here -->
+                </configuration>
+            </plugin>
             <plugin> <!-- checks owsp vulnerability database -->
                 <groupId>org.owasp</groupId>
                 <artifactId>dependency-check-maven</artifactId>
-                <version>5.2.2</version>
+                <version>5.3.0</version>
                 <executions>
                     <execution>
                         <goals>
@@ -288,13 +367,13 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.10</version>
+            <version>1.18.12</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.github.spotbugs</groupId>
             <artifactId>spotbugs-annotations</artifactId>
-            <version>4.0.0-beta4</version>
+            <version>4.0.0</version>
             <scope>provided</scope>
         </dependency>
 
@@ -302,43 +381,43 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>4.12</version>
+            <version>4.13</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>3.1.0</version>
+            <version>3.3.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.13.2</version>
+            <version>3.15.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.github.tomakehurst</groupId>
             <artifactId>wiremock</artifactId>
-            <version>2.25.1</version>
+            <version>2.26.1</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.reflections</groupId>
             <artifactId>reflections</artifactId>
-            <version>0.9.11</version>
+            <version>0.9.12</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>1.21</version>
+            <version>1.23</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>1.21</version>
+            <version>1.23</version>
             <scope>test</scope>
         </dependency>
 

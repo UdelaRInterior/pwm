@@ -32,7 +32,6 @@ import password.pwm.config.PwmSetting;
 import password.pwm.config.option.SelectableContextMode;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
-import password.pwm.error.PwmException;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.http.HttpHeader;
 import password.pwm.http.HttpMethod;
@@ -168,7 +167,7 @@ public class ClientApiServlet extends ControlledPwmServlet
 
         final AppData appData = makeAppData(
                 pwmRequest.getPwmApplication(),
-                pwmRequest.getPwmSession(),
+                pwmRequest,
                 pwmRequest.getHttpServletRequest(),
                 pwmRequest.getPwmResponse().getHttpServletResponse(),
                 pageUrl
@@ -195,11 +194,11 @@ public class ClientApiServlet extends ControlledPwmServlet
         try
         {
             final LinkedHashMap<String, String> displayData = new LinkedHashMap<>( makeDisplayData( pwmRequest.getPwmApplication(),
-                    pwmRequest.getPwmSession(), bundleName ) );
+                    pwmRequest, bundleName ) );
             final RestResultBean restResultBean = RestResultBean.withData( displayData );
             pwmRequest.outputJsonResult( restResultBean );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMSg = "error during rest /strings call for bundle " + bundleName + ", error: " + e.getMessage();
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, errorMSg );
@@ -223,13 +222,7 @@ public class ClientApiServlet extends ControlledPwmServlet
             final RestResultBean restResultBean = RestResultBean.withData( jsonOutput );
             pwmRequest.outputJsonResult( restResultBean );
         }
-        catch ( PwmException e )
-        {
-            final ErrorInformation errorInformation = e.getErrorInformation();
-            LOGGER.debug( pwmRequest, errorInformation );
-            pwmRequest.respondWithError( errorInformation );
-        }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMessage = "unexpected error executing web service: " + e.getMessage();
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, errorMessage );
@@ -286,7 +279,7 @@ public class ClientApiServlet extends ControlledPwmServlet
 
     private AppData makeAppData(
             final PwmApplication pwmApplication,
-            final PwmSession pwmSession,
+            final PwmRequest pwmSession,
             final HttpServletRequest request,
             final HttpServletResponse response,
             final String pageUrl
@@ -300,13 +293,14 @@ public class ClientApiServlet extends ControlledPwmServlet
 
     private static Map<String, Object> makeClientData(
             final PwmApplication pwmApplication,
-            final PwmSession pwmSession,
+            final PwmRequest pwmRequest,
             final HttpServletRequest request,
             final HttpServletResponse response,
             final String pageUrl
     )
             throws ChaiUnavailableException, PwmUnrecoverableException
     {
+        final PwmSession pwmSession = pwmRequest.getPwmSession();
         final Locale userLocale = pwmSession.getSessionStateBean().getLocale();
 
         final Configuration config = pwmApplication.getConfig();
@@ -328,19 +322,19 @@ public class ClientApiServlet extends ControlledPwmServlet
             long idleSeconds = config.readSettingAsLong( PwmSetting.IDLE_TIMEOUT_SECONDS );
             if ( pageUrl == null || pageUrl.isEmpty() )
             {
-                LOGGER.warn( pwmSession, "request to /client data did not include pageUrl" );
+                LOGGER.warn( pwmRequest, () -> "request to /client data did not include pageUrl" );
             }
             else
             {
                 try
                 {
                     final PwmURL pwmURL = new PwmURL( new URI( pageUrl ), request.getContextPath() );
-                    final TimeDuration maxIdleTime = IdleTimeoutCalculator.idleTimeoutForRequest( pwmURL, pwmApplication, pwmSession );
+                    final TimeDuration maxIdleTime = IdleTimeoutCalculator.idleTimeoutForRequest( pwmRequest );
                     idleSeconds = maxIdleTime.as( TimeDuration.Unit.SECONDS );
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
-                    LOGGER.error( pwmSession, "error determining idle timeout time for request: " + e.getMessage() );
+                    LOGGER.error( pwmRequest, () -> "error determining idle timeout time for request: " + e.getMessage() );
                 }
             }
             settingMap.put( "MaxInactiveInterval", idleSeconds );
@@ -361,7 +355,7 @@ public class ClientApiServlet extends ControlledPwmServlet
                     PwmSetting.DISPLAY_PASSWORD_GUIDE_TEXT,
                     pwmSession.getSessionStateBean().getLocale()
             );
-            final MacroMachine macroMachine = pwmSession.getSessionManager().getMacroMachine( pwmApplication );
+            final MacroMachine macroMachine = pwmSession.getSessionManager().getMacroMachine( );
             passwordGuideText = macroMachine.expandMacros( passwordGuideText );
             settingMap.put( "passwordGuideText", passwordGuideText );
         }
@@ -423,10 +417,11 @@ public class ClientApiServlet extends ControlledPwmServlet
 
     private Map<String, String> makeDisplayData(
             final PwmApplication pwmApplication,
-            final PwmSession pwmSession,
+            final PwmRequest pwmRequest,
             final String bundleName
     )
     {
+        final PwmSession pwmSession = pwmRequest.getPwmSession();
         Class displayClass = LocaleHelper.classForShortName( bundleName );
         displayClass = displayClass == null ? Display.class : displayClass;
 
@@ -436,7 +431,7 @@ public class ClientApiServlet extends ControlledPwmServlet
         final ResourceBundle bundle = ResourceBundle.getBundle( displayClass.getName() );
         try
         {
-            final MacroMachine macroMachine = pwmSession.getSessionManager().getMacroMachine( pwmApplication );
+            final MacroMachine macroMachine = pwmSession.getSessionManager().getMacroMachine( );
             for ( final String key : new TreeSet<>( Collections.list( bundle.getKeys() ) ) )
             {
                 String displayValue = LocaleHelper.getLocalizedMessage( userLocale, key, config, displayClass );
@@ -444,9 +439,9 @@ public class ClientApiServlet extends ControlledPwmServlet
                 displayStrings.put( key, displayValue );
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( pwmSession, "error expanding macro display value: " + e.getMessage() );
+            LOGGER.error( pwmRequest, () -> "error expanding macro display value: " + e.getMessage() );
         }
         return displayStrings;
     }
@@ -484,10 +479,12 @@ public class ClientApiServlet extends ControlledPwmServlet
     private void precheckPublicHealthAndStats( final PwmRequest pwmRequest )
             throws PwmUnrecoverableException
     {
-        if (
-                pwmRequest.getPwmApplication().getApplicationMode() != PwmApplicationMode.RUNNING
-                        && pwmRequest.getPwmApplication().getApplicationMode() != PwmApplicationMode.CONFIGURATION
-        )
+        if ( pwmRequest.getPwmApplication().getApplicationMode() == PwmApplicationMode.CONFIGURATION )
+        {
+            return;
+        }
+
+        if ( pwmRequest.getPwmApplication().getApplicationMode() != PwmApplicationMode.RUNNING )
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_SERVICE_NOT_AVAILABLE );
             throw new PwmUnrecoverableException( errorInformation );

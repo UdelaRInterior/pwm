@@ -207,7 +207,7 @@ public class AdminServlet extends ControlledPwmServlet
         {
             pwmApplication.getAuditManager().outputVaultToCsv( outputStream, pwmRequest.getLocale(), true );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, e.getMessage() );
             pwmRequest.respondWithError( errorInformation );
@@ -238,7 +238,7 @@ public class AdminServlet extends ControlledPwmServlet
             final ReportCsvUtility reportCsvUtility = new ReportCsvUtility( pwmApplication );
             reportCsvUtility.outputToCsv( outputStream, true, pwmRequest.getLocale() );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, e.getMessage() );
             pwmRequest.respondWithError( errorInformation );
@@ -269,7 +269,7 @@ public class AdminServlet extends ControlledPwmServlet
             final ReportCsvUtility reportCsvUtility = new ReportCsvUtility( pwmApplication );
             reportCsvUtility.outputSummaryToCsv( outputStream, pwmRequest.getLocale() );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, e.getMessage() );
             pwmRequest.respondWithError( errorInformation );
@@ -298,7 +298,7 @@ public class AdminServlet extends ControlledPwmServlet
             final StatisticsManager statsManager = pwmApplication.getStatisticsManager();
             statsManager.outputStatsToCsv( outputStream, pwmRequest.getLocale(), true );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, e.getMessage() );
             pwmRequest.respondWithError( errorInformation );
@@ -326,7 +326,7 @@ public class AdminServlet extends ControlledPwmServlet
         {
             pwmApplication.getSessionTrackService().outputToCsv( pwmRequest.getLocale(), pwmRequest.getConfig(), outputStream );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, e.getMessage() );
             pwmRequest.respondWithError( errorInformation );
@@ -450,7 +450,7 @@ public class AdminServlet extends ControlledPwmServlet
             final UserDebugDataBean userDebugData = UserDebugDataReader.readUserDebugData(
                     pwmRequest.getPwmApplication(),
                     pwmRequest.getLocale(),
-                    pwmRequest.getSessionLabel(),
+                    pwmRequest.getLabel(),
                     userIdentity
             );
             final String output = JsonUtil.serialize( userDebugData, JsonUtil.Flag.PrettyPrint );
@@ -529,7 +529,7 @@ public class AdminServlet extends ControlledPwmServlet
                 returnData.put( recordType.toString(), pwmRequest.getPwmApplication().getIntruderManager().getRecords( recordType, max ) );
             }
         }
-        catch ( PwmException e )
+        catch ( final PwmException e )
         {
             final ErrorInformation errorInfo = new ErrorInformation( PwmError.ERROR_INTERNAL, e.getMessage() );
             LOGGER.debug( pwmRequest, errorInfo );
@@ -554,11 +554,11 @@ public class AdminServlet extends ControlledPwmServlet
         final UserIdentity userIdentity;
         try
         {
-            userIdentity = userSearchEngine.resolveUsername( username, null, null, pwmRequest.getSessionLabel() );
+            userIdentity = userSearchEngine.resolveUsername( username, null, null, pwmRequest.getLabel() );
             final AdminBean adminBean = pwmRequest.getPwmApplication().getSessionStateService().getBean( pwmRequest, AdminBean.class );
             adminBean.setLastUserDebug( userIdentity );
         }
-        catch ( PwmUnrecoverableException | PwmOperationalException e )
+        catch ( final PwmUnrecoverableException | PwmOperationalException e )
         {
             setLastError( pwmRequest, e.getErrorInformation() );
             return;
@@ -567,7 +567,7 @@ public class AdminServlet extends ControlledPwmServlet
         final UserDebugDataBean userDebugData = UserDebugDataReader.readUserDebugData(
                 pwmRequest.getPwmApplication(),
                 pwmRequest.getLocale(),
-                pwmRequest.getSessionLabel(),
+                pwmRequest.getLabel(),
                 userIdentity
         );
         pwmRequest.setAttribute( PwmRequestAttribute.UserDebugData, userDebugData );
