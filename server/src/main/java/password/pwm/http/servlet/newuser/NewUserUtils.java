@@ -92,7 +92,7 @@ import java.util.Set;
 import java.io.File;
 import java.io.FileReader;
 import java.io.BufferedReader;
-//import java.nio.charset.StandardCharsets;
+import java.nio.charset.StandardCharsets;
 import password.pwm.config.value.data.ActionConfiguration.LdapAction;
 
 class NewUserUtils
