@@ -65,9 +65,9 @@ public abstract class AbstractPwmFilter implements Filter
             final PwmURL pwmURL = new PwmURL( req );
             interested = isInterested( mode, pwmURL );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "unexpected error processing filter chain during isInterested(): " + e.getMessage(), e );
+            LOGGER.error( () -> "unexpected error processing filter chain during isInterested(): " + e.getMessage(), e );
             resp.sendError( 500, "unexpected error processing filter chain during isInterested" );
             return;
         }
@@ -79,7 +79,7 @@ public abstract class AbstractPwmFilter implements Filter
             {
                 pwmRequest = PwmRequest.forRequest( req, resp );
             }
-            catch ( PwmException e )
+            catch ( final PwmException e )
             {
                 final PwmURL pwmURL = new PwmURL( req );
                 if ( pwmURL.isResourceURL() )
@@ -88,7 +88,7 @@ public abstract class AbstractPwmFilter implements Filter
                     return;
                 }
 
-                LOGGER.error( pwmRequest, "unexpected error processing filter chain: " + e.getMessage(), e );
+                LOGGER.error( pwmRequest, () -> "unexpected error processing filter chain: " + e.getMessage(), e );
             }
 
             try
@@ -96,11 +96,11 @@ public abstract class AbstractPwmFilter implements Filter
                 final PwmFilterChain pwmFilterChain = new PwmFilterChain( servletRequest, servletResponse, filterChain );
                 processFilter( mode, pwmRequest, pwmFilterChain );
             }
-            catch ( PwmException e )
+            catch ( final PwmException e )
             {
-                LOGGER.error( pwmRequest, "unexpected error processing filter chain: " + e.getMessage(), e );
+                LOGGER.error( pwmRequest, () -> "unexpected error processing filter chain: " + e.getMessage(), e );
             }
-            catch ( IOException e )
+            catch ( final  IOException e )
             {
                 LOGGER.debug( pwmRequest, () -> "i/o error processing request: " + e.getMessage() );
             }

@@ -33,7 +33,7 @@ import password.pwm.config.profile.LdapProfile;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
-import password.pwm.http.PwmSession;
+import password.pwm.http.PwmRequest;
 import password.pwm.util.logging.PwmLogger;
 
 /**
@@ -82,13 +82,13 @@ public class LdapOtpOperator extends AbstractOtpOperator
                 otp = decomposeOtpAttribute( value );
             }
         }
-        catch ( ChaiOperationException e )
+        catch ( final ChaiOperationException e )
         {
             final String errorMsg = "unexpected LDAP error reading responses: " + e.getMessage();
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg );
             throw new PwmUnrecoverableException( errorInformation );
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             final String errorMsg = "unexpected LDAP error reading responses: " + e.getMessage();
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg );
@@ -99,11 +99,12 @@ public class LdapOtpOperator extends AbstractOtpOperator
 
     @Override
     public void writeOtpUserConfiguration(
-            final PwmSession pwmSession,
+            final PwmRequest pwmRequest,
             final UserIdentity userIdentity,
             final String userGuid,
             final OTPUserRecord otpConfig
-    ) throws PwmUnrecoverableException
+    )
+            throws PwmUnrecoverableException
     {
         final Configuration config = pwmApplication.getConfig();
         final LdapProfile ldapProfile = config.getLdapProfiles().get( userIdentity.getLdapProfileID() );
@@ -127,13 +128,13 @@ public class LdapOtpOperator extends AbstractOtpOperator
             {
                 value = encryptAttributeValue( value );
             }
-            final ChaiUser theUser = pwmSession == null
+            final ChaiUser theUser = pwmRequest == null
                     ? pwmApplication.getProxiedChaiUser( userIdentity )
-                    : pwmSession.getSessionManager().getActor( pwmApplication, userIdentity );
+                    : pwmRequest.getPwmSession().getSessionManager().getActor( userIdentity );
             theUser.writeStringAttribute( ldapStorageAttribute, value );
             LOGGER.info( () -> "saved OTP secret for user to chai-ldap format" );
         }
-        catch ( ChaiException ex )
+        catch ( final ChaiException ex )
         {
             final String errorMsg;
             if ( ex.getErrorCode() == ChaiError.NO_ACCESS )
@@ -155,7 +156,7 @@ public class LdapOtpOperator extends AbstractOtpOperator
 
     @Override
     public void clearOtpUserConfiguration(
-            final PwmSession pwmSession,
+            final PwmRequest pwmRequest,
             final UserIdentity userIdentity,
             final ChaiUser chaiUser,
             final String userGuid
@@ -177,7 +178,7 @@ public class LdapOtpOperator extends AbstractOtpOperator
             chaiUser.deleteAttribute( ldapStorageAttribute, null );
             LOGGER.info( () -> "cleared OTP secret for user to chai-ldap format" );
         }
-        catch ( ChaiOperationException e )
+        catch ( final ChaiOperationException e )
         {
             final String errorMsg;
             if ( e.getErrorCode() == ChaiError.NO_ACCESS )
@@ -195,7 +196,7 @@ public class LdapOtpOperator extends AbstractOtpOperator
             pwmOE.initCause( e );
             throw pwmOE;
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_DIRECTORY_UNAVAILABLE, e.getMessage() ) );
         }

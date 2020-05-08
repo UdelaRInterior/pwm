@@ -195,9 +195,9 @@ public abstract class PeopleSearchServlet extends ControlledPwmServlet
             pwmRequest.outputJsonResult( RestResultBean.withData( orgChartData ) );
             StatisticsManager.incrementStat( pwmRequest, Statistic.PEOPLESEARCH_ORGCHART );
         }
-        catch ( PwmException e )
+        catch ( final PwmException e )
         {
-            LOGGER.error( pwmRequest, "error generating user detail object: " + e.getMessage() );
+            LOGGER.error( pwmRequest, () -> "error generating user detail object: " + e.getMessage() );
             pwmRequest.respondWithError( e.getErrorInformation() );
         }
 
@@ -331,7 +331,7 @@ public abstract class PeopleSearchServlet extends ControlledPwmServlet
 
         if ( pwmRequest.isAuthenticated() )
         {
-            return pwmRequest.getPwmSession().getSessionManager().getPeopleSearchProfile( pwmRequest.getPwmApplication() );
+            return pwmRequest.getPwmSession().getSessionManager().getPeopleSearchProfile();
         }
 
         throw PwmUnrecoverableException.newException( PwmError.ERROR_NO_PROFILE_ASSIGNED, "unable to load peoplesearch profile for authenticated user" );

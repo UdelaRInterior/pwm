@@ -20,6 +20,7 @@
 
 package password.pwm.http;
 
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import password.pwm.AppProperty;
 import password.pwm.PwmApplication;
 import password.pwm.PwmConstants;
@@ -59,15 +60,20 @@ public class PwmSession implements Serializable
 {
     private static final PwmLogger LOGGER = PwmLogger.forClass( PwmSession.class );
 
-    private final LocalSessionStateBean sessionStateBean;
+    private final transient PwmApplication pwmApplication;
+
+    @SuppressFBWarnings( "SE_TRANSIENT_FIELD_NOT_RESTORED" )
+    private final transient LocalSessionStateBean sessionStateBean = new LocalSessionStateBean();
+
+    @SuppressFBWarnings( "SE_TRANSIENT_FIELD_NOT_RESTORED" )
+    private final transient UserSessionDataCacheBean userSessionDataCacheBean = new UserSessionDataCacheBean();
 
     private LoginInfoBean loginInfoBean;
     private transient UserInfo userInfo;
-    private UserSessionDataCacheBean userSessionDataCacheBean;
 
     private static final Object CREATION_LOCK = new Object();
 
-    private transient SessionManager sessionManager;
+    private final transient SessionManager sessionManager;
 
     public static PwmSession createPwmSession( final PwmApplication pwmApplication )
             throws PwmUnrecoverableException
@@ -87,7 +93,7 @@ public class PwmSession implements Serializable
             throw new IllegalStateException( "PwmApplication must be available during session creation" );
         }
 
-        sessionStateBean = new LocalSessionStateBean();
+        this.pwmApplication = pwmApplication;
         this.sessionStateBean.setSessionID( pwmApplication.getSessionTrackService().generateNewSessionID() );
 
         this.sessionStateBean.setSessionLastAccessedTime( Instant.now() );
@@ -98,17 +104,14 @@ public class PwmSession implements Serializable
         }
 
         pwmApplication.getSessionTrackService().addSessionData( this );
+        this.sessionManager = new SessionManager( pwmApplication, this );
 
-        LOGGER.trace( this, () -> "created new session" );
+        LOGGER.trace( () -> "created new session" );
     }
 
 
     public SessionManager getSessionManager( )
     {
-        if ( sessionManager == null )
-        {
-            sessionManager = new SessionManager( this );
-        }
         return sessionManager;
     }
 
@@ -135,17 +138,19 @@ public class PwmSession implements Serializable
         this.userInfo = userInfo;
     }
 
-    public void reloadUserInfoBean( final PwmApplication pwmApplication ) throws PwmUnrecoverableException
+    public void reloadUserInfoBean( final PwmRequest pwmRequest )
+            throws PwmUnrecoverableException
     {
-        LOGGER.trace( this, () -> "performing reloadUserInfoBean" );
+        LOGGER.trace( () -> "performing reloadUserInfoBean" );
         final UserInfo oldUserInfoBean = getUserInfo();
+        final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
 
         final UserInfo userInfo;
         if ( getLoginInfoBean().getAuthFlags().contains( AuthenticationType.AUTH_BIND_INHIBIT ) )
         {
             userInfo = UserInfoFactory.newUserInfo(
                     pwmApplication,
-                    getLabel(),
+                    pwmRequest.getLabel(),
                     getSessionStateBean().getLocale(),
                     oldUserInfoBean.getUserIdentity(),
                     pwmApplication.getProxyChaiProvider( oldUserInfoBean.getUserIdentity().getLdapProfileID() )
@@ -155,7 +160,7 @@ public class PwmSession implements Serializable
         {
             userInfo = UserInfoFactory.newUserInfoUsingProxy(
                     pwmApplication,
-                    getLabel(),
+                    pwmRequest.getLabel(),
                     oldUserInfoBean.getUserIdentity(),
                     getSessionStateBean().getLocale(),
                     loginInfoBean.getUserCurrentPassword()
@@ -186,10 +191,6 @@ public class PwmSession implements Serializable
 
     public UserSessionDataCacheBean getUserSessionDataCacheBean( )
     {
-        if ( userSessionDataCacheBean == null )
-        {
-            userSessionDataCacheBean = new UserSessionDataCacheBean();
-        }
         return userSessionDataCacheBean;
     }
 
@@ -197,19 +198,30 @@ public class PwmSession implements Serializable
     {
         final LocalSessionStateBean ssBean = this.getSessionStateBean();
 
+        UserIdentity userIdentity = null;
         String userID = null;
-        try
+
+        if ( isAuthenticated() )
         {
-            userID = isAuthenticated()
-                    ? this.getUserInfo().getUsername()
-                    : null;
+            try
+            {
+                final UserInfo userInfo = getUserInfo();
+                userIdentity = userInfo.getUserIdentity();
+                userID = userInfo.getUsername();
+            }
+            catch ( final PwmUnrecoverableException e )
+            {
+                LOGGER.error( () -> "unexpected error reading username: " + e.getMessage(), e );
+            }
         }
-        catch ( PwmUnrecoverableException e )
-        {
-            LOGGER.error( "unexpected error reading username: " + e.getMessage(), e );
-        }
-        final UserIdentity userIdentity = isAuthenticated() ? this.getUserInfo().getUserIdentity() : null;
-        return new SessionLabel( ssBean.getSessionID(), userIdentity, userID, ssBean.getSrcAddress(), ssBean.getSrcAddress() );
+
+        return SessionLabel.builder()
+                .sessionID( ssBean.getSessionID() )
+                .userID( userIdentity == null ? null : userIdentity.toDelimitedKey() )
+                .username( userID )
+                .sourceAddress( ssBean.getSrcAddress() )
+                .sourceHostname( ssBean.getSrcHostname() )
+                .build();
     }
 
     /**
@@ -240,7 +252,7 @@ public class PwmSession implements Serializable
             // close out any outstanding connections
             getSessionManager().closeConnections();
 
-            LOGGER.debug( this, () -> sb.toString() );
+            LOGGER.debug( pwmRequest, () -> sb.toString() );
         }
 
         if ( pwmRequest != null )
@@ -254,7 +266,7 @@ public class PwmSession implements Serializable
             {
                 pwmRequest.getPwmApplication().getSessionStateService().clearLoginSession( pwmRequest );
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
                 final String errorMsg = "unexpected error writing removing login cookie from response: " + e.getMessage();
                 final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg );
@@ -266,7 +278,7 @@ public class PwmSession implements Serializable
 
         userInfo = null;
         loginInfoBean = null;
-        userSessionDataCacheBean = null;
+        userSessionDataCacheBean.clearPermissions();
     }
 
     public TimeDuration getIdleTime( )
@@ -295,7 +307,7 @@ public class PwmSession implements Serializable
             debugData.put( "locale", getSessionStateBean().getLocale() );
             debugData.put( "theme", getSessionStateBean().getTheme() );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             return "exception generating PwmSession.toString(): " + e.getMessage();
         }
@@ -303,9 +315,10 @@ public class PwmSession implements Serializable
         return "PwmSession instance: " + JsonUtil.serializeMap( debugData );
     }
 
-    public boolean setLocale( final PwmApplication pwmApplication, final String localeString )
+    public boolean setLocale( final PwmRequest pwmRequest, final String localeString )
             throws PwmUnrecoverableException
     {
+        final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
         if ( pwmApplication == null )
         {
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_APP_UNAVAILABLE, "unable to read context manager" ) );
@@ -316,19 +329,19 @@ public class PwmSession implements Serializable
         final Locale requestedLocale = LocaleHelper.parseLocaleString( localeString );
         if ( knownLocales.contains( requestedLocale ) || "default".equalsIgnoreCase( localeString ) )
         {
-            LOGGER.debug( this, () -> "setting session locale to '" + localeString + "'" );
+            LOGGER.debug( pwmRequest, () -> "setting session locale to '" + localeString + "'" );
             ssBean.setLocale( "default".equalsIgnoreCase( localeString )
                     ? PwmConstants.DEFAULT_LOCALE
                     : requestedLocale );
             if ( this.isAuthenticated() )
             {
-                this.reloadUserInfoBean( pwmApplication );
+                this.reloadUserInfoBean( pwmRequest );
             }
             return true;
         }
         else
         {
-            LOGGER.error( this, "ignoring unknown locale value set request for locale '" + localeString + "'" );
+            LOGGER.error( pwmRequest, () -> "ignoring unknown locale value set request for locale '" + localeString + "'" );
             ssBean.setLocale( PwmConstants.DEFAULT_LOCALE );
             return false;
         }

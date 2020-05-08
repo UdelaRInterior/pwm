@@ -119,7 +119,7 @@ public class CaptchaUtility
 
         final String bodyText = "secret=" + StringUtil.urlEncode( privateKey.getStringValue() )
                 + "&"
-                + "remoteip=" + StringUtil.urlEncode( pwmRequest.getSessionLabel().getSrcAddress() )
+                + "remoteip=" + StringUtil.urlEncode( pwmRequest.getLabel().getSourceAddress() )
                 + "&"
                 + "response=" + StringUtil.urlEncode( recaptchaResponse );
 
@@ -134,7 +134,7 @@ public class CaptchaUtility
 
             LOGGER.debug( pwmRequest, () -> "sending reCaptcha verification request" );
             final PwmHttpClient client = pwmRequest.getPwmApplication().getHttpClientService().getPwmHttpClient();
-            final PwmHttpClientResponse clientResponse = client.makeRequest( clientRequest, pwmRequest.getSessionLabel()  );
+            final PwmHttpClientResponse clientResponse = client.makeRequest( clientRequest, pwmRequest.getLabel()  );
 
             if ( clientResponse.getStatusCode() != HttpServletResponse.SC_OK )
             {
@@ -169,10 +169,10 @@ public class CaptchaUtility
                 }
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMsg = "unexpected error during reCaptcha API execution: " + e.getMessage();
-            LOGGER.error( errorMsg, e );
+            LOGGER.error( () -> errorMsg, e );
             final ErrorInformation errorInfo = new ErrorInformation( PwmError.ERROR_CAPTCHA_API_ERROR, errorMsg );
             final PwmUnrecoverableException pwmE = new PwmUnrecoverableException( errorInfo );
             pwmE.initCause( e );
@@ -351,7 +351,7 @@ public class CaptchaUtility
                 }
                 else
                 {
-                    LOGGER.error( pwmRequest, "skipCaptcha value is in request, however value '" + requestValue + "' does not match configured value" );
+                    LOGGER.debug( pwmRequest, () -> "skipCaptcha value is in request, however value '" + requestValue + "' does not match configured value" );
                 }
             }
         }

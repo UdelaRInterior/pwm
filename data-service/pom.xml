@@ -22,10 +22,8 @@
 
     <properties>
         <skipTests>false</skipTests>
-        <timestamp.iso>${maven.build.timestamp}</timestamp.iso>
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ss'Z'</maven.build.timestamp.format>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <project.root.basedir>${project.basedir}/..</project.root.basedir>
     </properties>
 
     <profiles>
@@ -127,7 +125,7 @@
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
-            <version>1.7</version>
+            <version>1.8</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -142,7 +140,7 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.10</version>
+            <version>4.5.11</version>
         </dependency>
         <dependency>
             <groupId>log4j</groupId>

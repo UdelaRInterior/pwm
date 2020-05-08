@@ -77,7 +77,7 @@ public class DerbyLocalDB extends AbstractJDBCLocalDB
             }
 
         }
-        catch ( SQLException e )
+        catch ( final SQLException e )
         {
             if ( "XJ015".equals( e.getSQLState() ) )
             {
@@ -96,9 +96,9 @@ public class DerbyLocalDB extends AbstractJDBCLocalDB
                 DriverManager.deregisterDriver( driver );
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error while de-registering derby driver: " + e.getMessage() );
+            LOGGER.error( () -> "error while de-registering derby driver: " + e.getMessage() );
         }
 
         driver = null;
@@ -107,9 +107,9 @@ public class DerbyLocalDB extends AbstractJDBCLocalDB
         {
             connection.close();
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error while closing derby connection: " + e.getMessage() );
+            LOGGER.error( () -> "error while closing derby connection: " + e.getMessage() );
         }
     }
 
@@ -138,7 +138,7 @@ public class DerbyLocalDB extends AbstractJDBCLocalDB
 
             return connection;
         }
-        catch ( Throwable e )
+        catch ( final Throwable e )
         {
             final String errorMsg;
             if ( e instanceof SQLException )
@@ -165,7 +165,7 @@ public class DerbyLocalDB extends AbstractJDBCLocalDB
             {
                 errorMsg = "error opening DB: " + e.getMessage();
             }
-            LOGGER.error( errorMsg, e );
+            LOGGER.error( () -> errorMsg, e );
             throw new LocalDBException( new ErrorInformation( PwmError.ERROR_LOCALDB_UNAVAILABLE, errorMsg ) );
         }
     }
@@ -216,9 +216,9 @@ public class DerbyLocalDB extends AbstractJDBCLocalDB
             statement.setShort( 5, ( short ) 1 );
             statement.execute();
         }
-        catch ( SQLException ex )
+        catch ( final SQLException ex )
         {
-            LOGGER.error( "error reclaiming space in table " + db.toString() + ": " + ex.getMessage() );
+            LOGGER.error( () -> "error reclaiming space in table " + db.toString() + ": " + ex.getMessage() );
         }
         finally
         {

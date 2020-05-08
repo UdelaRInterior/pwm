@@ -56,22 +56,22 @@ public class JspThrowableHandlerTag extends TagSupport
             final String exceptionStr = JavaHelper.throwableToString( jspThrowable );
             final String errorHash = SecureEngine.hash( exceptionStr, PwmHashAlgorithm.SHA1 );
 
-            LOGGER.error( "jsp error reference " + errorHash, jspThrowable );
+            LOGGER.error( () -> "jsp error reference " + errorHash, jspThrowable );
 
             final String jspOutout = jspOutput( errorHash );
             pageContext.getOut().write( jspOutout );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             try
             {
                 pageContext.getOut().write( "" );
             }
-            catch ( IOException e1 )
+            catch ( final IOException e1 )
             {
                 /* ignore */
             }
-            LOGGER.error( "error during pwmFormIDTag output of pwmFormID: " + e.getMessage() );
+            LOGGER.error( () -> "error during pwmFormIDTag output of pwmFormID: " + e.getMessage() );
         }
         return EVAL_PAGE;
     }
@@ -86,9 +86,9 @@ public class JspThrowableHandlerTag extends TagSupport
             userLocale = pwmRequest.getLocale();
             configuration = pwmRequest.getConfig();
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error during pwmFormIDTag output of pwmFormID: " + e.getMessage() );
+            LOGGER.error( () -> "error during pwmFormIDTag output of pwmFormID: " + e.getMessage() );
         }
         final String[] strArgs = new String[]
                 {

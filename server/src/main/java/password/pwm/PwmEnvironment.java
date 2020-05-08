@@ -41,7 +41,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -74,7 +73,8 @@ public class PwmEnvironment
         AppliancePort,
         ApplianceHostnameFile,
         ApplianceTokenFile,
-        InstanceID,;
+        InstanceID,
+        InitConsoleLogLevel,;
 
         public static ApplicationParameter forString( final String input )
         {
@@ -317,7 +317,7 @@ public class PwmEnvironment
             final String rawValue = readValueFromSystem( EnvironmentParameter.applicationParamFile, contextName );
             if ( rawValue != null )
             {
-                return parseApplicationParamValueParameter( rawValue );
+                return readAppParametersFromPath( rawValue );
             }
             return Collections.emptyMap();
         }
@@ -367,12 +367,12 @@ public class PwmEnvironment
                     }
                     else
                     {
-                        LOGGER.warn( "unknown " + EnvironmentParameter.applicationFlags.toString() + " value: " + input );
+                        LOGGER.warn( () -> "unknown " + EnvironmentParameter.applicationFlags.toString() + " value: " + input );
                     }
                 }
                 return Collections.unmodifiableList( returnFlags );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 //
             }
@@ -387,13 +387,13 @@ public class PwmEnvironment
                 }
                 else
                 {
-                    LOGGER.warn( "unknown " + EnvironmentParameter.applicationFlags.toString() + " value: " + input );
+                    LOGGER.warn( () -> "unknown " + EnvironmentParameter.applicationFlags.toString() + " value: " + input );
                 }
             }
             return returnFlags;
         }
 
-        public static Map<ApplicationParameter, String> parseApplicationParamValueParameter( final String input )
+        public static Map<ApplicationParameter, String> readAppParametersFromPath( final String input )
         {
             if ( input == null )
             {
@@ -405,9 +405,9 @@ public class PwmEnvironment
             {
                 propValues.load( fileInputStream );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.warn( "error reading properties file '" + input + "' specified by environment setting "
+                LOGGER.warn( () -> "error reading properties file '" + input + "' specified by environment setting "
                         + EnvironmentParameter.applicationParamFile.toString() + ", error: " + e.getMessage() );
             }
 
@@ -424,14 +424,14 @@ public class PwmEnvironment
                     }
                     else
                     {
-                        LOGGER.warn( "unknown " + EnvironmentParameter.applicationParamFile.toString() + " value: " + input );
+                        LOGGER.warn( () -> "unknown " + EnvironmentParameter.applicationParamFile.toString() + " value: " + input );
                     }
                 }
                 return Collections.unmodifiableMap( returnParams );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.warn( "unable to parse jason value of " + EnvironmentParameter.applicationParamFile.toString() + ", error: " + e.getMessage() );
+                LOGGER.warn( () -> "unable to parse jason value of " + EnvironmentParameter.applicationParamFile.toString() + ", error: " + e.getMessage() );
             }
 
             return Collections.emptyMap();
@@ -625,9 +625,9 @@ public class PwmEnvironment
                         LOGGER.debug( () -> "unable to obtain file lock on file " + lockfile.getAbsolutePath() );
                     }
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
-                    LOGGER.error( "unable to obtain file lock on file " + lockfile.getAbsolutePath() + " due to error: " + e.getMessage() );
+                    LOGGER.error( () -> "unable to obtain file lock on file " + lockfile.getAbsolutePath() + " due to error: " + e.getMessage() );
                 }
             }
         }
@@ -637,7 +637,7 @@ public class PwmEnvironment
             try
             {
                 final Properties props = new Properties();
-                props.put( "timestamp", JavaHelper.toIsoDate( new Date() ) );
+                props.put( "timestamp", JavaHelper.toIsoDate( Instant.now() ) );
                 props.put( "applicationPath", PwmEnvironment.this.getApplicationPath() == null ? "n/a" : PwmEnvironment.this.getApplicationPath().getAbsolutePath() );
                 props.put( "configurationFile", PwmEnvironment.this.getConfigurationFile() == null ? "n/a" : PwmEnvironment.this.getConfigurationFile().getAbsolutePath() );
                 final String comment = PwmConstants.PWM_APP_NAME + " file lock";
@@ -645,9 +645,9 @@ public class PwmEnvironment
                 props.store( stringWriter, comment );
                 file.write( stringWriter.getBuffer().toString().getBytes( PwmConstants.DEFAULT_CHARSET ) );
             }
-            catch ( IOException e )
+            catch ( final IOException e )
             {
-                LOGGER.error( "unable to write contents of application lock file: " + e.getMessage() );
+                LOGGER.error( () -> "unable to write contents of application lock file: " + e.getMessage() );
             }
             // do not close FileWriter, otherwise lock is released.
         }
@@ -660,9 +660,9 @@ public class PwmEnvironment
                 {
                     lock.release();
                 }
-                catch ( IOException e )
+                catch ( final IOException e )
                 {
-                    LOGGER.error( "error releasing file lock: " + e.getMessage() );
+                    LOGGER.error( () -> "error releasing file lock: " + e.getMessage() );
                 }
 
                 LOGGER.debug( () -> "released file lock on file " + lockfile.getAbsolutePath() );

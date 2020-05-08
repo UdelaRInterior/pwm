@@ -23,6 +23,7 @@ package password.pwm.svc.telemetry;
 import com.novell.ldapchai.provider.DirectoryVendor;
 import lombok.Builder;
 import lombok.Getter;
+import password.pwm.AppAttribute;
 import password.pwm.AppProperty;
 import password.pwm.PwmAboutProperty;
 import password.pwm.PwmApplication;
@@ -127,7 +128,7 @@ public class TelemetryService implements PwmService
         {
             initSender();
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             LOGGER.trace( SessionLabel.TELEMETRY_SESSION_LABEL, () -> "will remain closed, unable to init sender: " + e.getMessage() );
             status = STATUS.CLOSED;
@@ -135,7 +136,7 @@ public class TelemetryService implements PwmService
         }
 
         {
-            final Instant storedLastPublishTimestamp = pwmApplication.readAppAttribute( PwmApplication.AppAttribute.TELEMETRY_LAST_PUBLISH_TIMESTAMP, Instant.class );
+            final Instant storedLastPublishTimestamp = pwmApplication.readAppAttribute( AppAttribute.TELEMETRY_LAST_PUBLISH_TIMESTAMP, Instant.class );
             lastPublishTime = storedLastPublishTimestamp != null
                     ? storedLastPublishTimestamp
                     : pwmApplication.getInstallTime();
@@ -164,7 +165,7 @@ public class TelemetryService implements PwmService
             final Class theClass = Class.forName( senderClass );
             telemetrySender = ( TelemetrySender ) theClass.newInstance();
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String msg = "unable to load implementation class: " + e.getMessage();
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, msg ) );
@@ -175,7 +176,7 @@ public class TelemetryService implements PwmService
             final String macrodSettings = MacroMachine.forNonUserSpecific( pwmApplication, null ).expandMacros( settings.getSenderSettings() );
             telemetrySender.init( pwmApplication, macrodSettings );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String msg = "unable to init implementation class: " + e.getMessage();
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, msg ) );
@@ -198,15 +199,15 @@ public class TelemetryService implements PwmService
                 sender.publish( telemetryPublishBean );
                 LOGGER.trace( SessionLabel.TELEMETRY_SESSION_LABEL, () -> "sent telemetry data: " + JsonUtil.serialize( telemetryPublishBean ) );
             }
-            catch ( PwmException e )
+            catch ( final PwmException e )
             {
                 lastError = e.getErrorInformation();
-                LOGGER.error( SessionLabel.TELEMETRY_SESSION_LABEL, "error sending telemetry data: " + e.getMessage() );
+                LOGGER.error( SessionLabel.TELEMETRY_SESSION_LABEL, () -> "error sending telemetry data: " + e.getMessage() );
             }
         }
 
         lastPublishTime = Instant.now();
-        pwmApplication.writeAppAttribute( PwmApplication.AppAttribute.TELEMETRY_LAST_PUBLISH_TIMESTAMP, lastPublishTime );
+        pwmApplication.writeAppAttribute( AppAttribute.TELEMETRY_LAST_PUBLISH_TIMESTAMP, lastPublishTime );
         scheduleNextJob();
     }
 
@@ -226,13 +227,13 @@ public class TelemetryService implements PwmService
             {
                 executePublishJob();
             }
-            catch ( PwmException e )
+            catch ( final PwmException e )
             {
                 LOGGER.error( e.getErrorInformation() );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.error( "unexpected error during telemetry publish job: " + e.getMessage() );
+                LOGGER.error( () -> "unexpected error during telemetry publish job: " + e.getMessage() );
             }
         }
     }
@@ -298,7 +299,7 @@ public class TelemetryService implements PwmService
                         ldapVendorName = pwmLdapVendor.name();
                     }
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
                     LOGGER.trace( SessionLabel.TELEMETRY_SESSION_LABEL, () -> "unable to read ldap vendor type for stats publication: " + e.getMessage() );
                 }

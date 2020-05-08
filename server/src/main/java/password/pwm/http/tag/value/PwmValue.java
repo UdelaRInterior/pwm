@@ -114,13 +114,12 @@ public enum PwmValue
             {
                 try
                 {
-                    final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine(
-                            pwmRequest.getPwmApplication() );
+                    final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine();
                     outputURL = macroMachine.expandMacros( outputURL );
                 }
-                catch ( PwmUnrecoverableException e )
+                catch ( final PwmUnrecoverableException e )
                 {
-                    LOGGER.error( pwmRequest, "error expanding macros in homeURL: " + e.getMessage() );
+                    LOGGER.error( pwmRequest, () -> "error expanding macros in homeURL: " + e.getMessage() );
                 }
             }
             return outputURL;
@@ -158,14 +157,13 @@ public enum PwmValue
             {
                 try
                 {
-                    final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine(
-                            pwmRequest.getPwmApplication() );
+                    final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine();
                     final String expandedScript = macroMachine.expandMacros( customScript );
                     return expandedScript;
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
-                    LOGGER.error( pwmRequest, "error while expanding customJavascript macros: " + e.getMessage() );
+                    LOGGER.error( pwmRequest, () -> "error while expanding customJavascript macros: " + e.getMessage() );
                     return customScript;
                 }
             }

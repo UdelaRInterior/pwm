@@ -92,9 +92,9 @@ public abstract class ControlledPwmServlet extends AbstractPwmServlet implements
             final Enum answer = JavaHelper.readEnumFromString( processStatusClass, null, inputParameter );
             return ( ProcessAction ) answer;
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error", e );
+            LOGGER.error( () -> "error", e );
         }
         return null;
     }
@@ -119,7 +119,7 @@ public abstract class ControlledPwmServlet extends AbstractPwmServlet implements
                 return ( ProcessStatus ) interestedMethod.invoke( this, pwmRequest );
             }
         }
-        catch ( InvocationTargetException e )
+        catch ( final InvocationTargetException e )
         {
             final Throwable cause = e.getCause();
             if ( cause != null )
@@ -131,20 +131,20 @@ public abstract class ControlledPwmServlet extends AbstractPwmServlet implements
                 final String msg = "unexpected error during action handler for '"
                         + this.getClass().getName()
                         + ":" + action + "', error: " + cause.getMessage();
-                LOGGER.error( pwmRequest, msg, e.getCause() );
+                LOGGER.error( pwmRequest, () -> msg, e.getCause() );
                 throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, msg ) );
             }
-            LOGGER.error( "uncased invocation error: " + e.getMessage(), e );
+            LOGGER.error( () -> "uncased invocation error: " + e.getMessage(), e );
         }
-        catch ( Throwable e )
+        catch ( final Throwable e )
         {
             final String msg = "unexpected error invoking action handler for '" + action + "', error: " + e.getMessage();
-            LOGGER.error( msg, e );
+            LOGGER.error( () -> msg, e );
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, msg ) );
         }
 
         final String msg = "missing action handler for '" + action + "'";
-        LOGGER.error( msg );
+        LOGGER.error( () -> msg );
         throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, msg ) );
     }
 
@@ -164,7 +164,7 @@ public abstract class ControlledPwmServlet extends AbstractPwmServlet implements
                     if ( pwmRequest.getConfig().isDevDebugMode() )
                     {
                         final String msg = "processing complete, handler returned halt but response is not committed";
-                        LOGGER.error( pwmRequest, msg, new IllegalStateException( msg ) );
+                        LOGGER.error( pwmRequest, () -> msg, new IllegalStateException( msg ) );
                     }
                 }
                 return;
@@ -215,7 +215,7 @@ public abstract class ControlledPwmServlet extends AbstractPwmServlet implements
     {
         final Map<String, Method> map = new HashMap<>();
         final Collection<Method> methods = JavaHelper.getAllMethodsForClass( this.getClass() );
-        for ( Method method : methods )
+        for ( final Method method : methods )
         {
             if ( method.getAnnotation( ActionHandler.class ) != null )
             {

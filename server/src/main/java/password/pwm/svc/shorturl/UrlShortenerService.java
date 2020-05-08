@@ -81,17 +81,17 @@ public class UrlShortenerService implements PwmService
                 theShortener = ( BasicUrlShortener ) theClass.newInstance();
                 theShortener.setConfiguration( sConfig );
             }
-            catch ( java.lang.IllegalAccessException e )
+            catch ( final java.lang.IllegalAccessException e )
             {
-                LOGGER.error( "Illegal access to class " + classNameString + ": " + e.toString() );
+                LOGGER.error( () ->  "illegal access to class " + classNameString + ": " + e.toString() );
             }
-            catch ( java.lang.InstantiationException e )
+            catch ( final java.lang.InstantiationException e )
             {
-                LOGGER.error( "Cannot instantiate class " + classNameString + ": " + e.toString() );
+                LOGGER.error( () -> "cannot instantiate class " + classNameString + ": " + e.toString() );
             }
-            catch ( java.lang.ClassNotFoundException e )
+            catch ( final java.lang.ClassNotFoundException e )
             {
-                LOGGER.error( "Class " + classNameString + " not found: " + e.getMessage() );
+                LOGGER.error( () -> "class " + classNameString + " not found: " + e.getMessage() );
             }
         }
         status = PwmService.STATUS.OPEN;
@@ -154,9 +154,9 @@ public class UrlShortenerService implements PwmService
                 return result.toString();
             }
         }
-        catch ( PatternSyntaxException e )
+        catch ( final PatternSyntaxException e )
         {
-            LOGGER.error( "Error compiling pattern: " + e.getMessage() );
+            LOGGER.error( () -> "error compiling pattern: " + e.getMessage() );
         }
         return text;
     }

@@ -368,7 +368,7 @@ public class FormUtility
                         final ChaiUser theUser = pwmApplication.getProxiedChaiUser( userIdentity );
                         compareResult = theUser.compareStringAttribute( name, value );
                     }
-                    catch ( ChaiOperationException | ChaiUnavailableException e )
+                    catch ( final ChaiOperationException | ChaiUnavailableException e )
                     {
                         final PwmError error = PwmError.forChaiError( e.getErrorCode() );
                         throw new PwmUnrecoverableException( error.toInfo() );
@@ -392,7 +392,7 @@ public class FormUtility
                 throw new PwmDataValidationException( error );
             }
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
             if ( cacheService != null )
             {
@@ -557,7 +557,7 @@ public class FormUtility
                 }
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             PwmError error = null;
             if ( e instanceof ChaiException )
@@ -570,7 +570,7 @@ public class FormUtility
             }
 
             final ErrorInformation errorInformation = new ErrorInformation( error, "error reading current profile values: " + e.getMessage() );
-            LOGGER.error( sessionLabel, errorInformation.getDetailedErrorMsg() );
+            LOGGER.error( sessionLabel, () -> errorInformation.getDetailedErrorMsg() );
             throw new PwmUnrecoverableException( errorInformation );
         }
 

@@ -82,7 +82,7 @@ public abstract class RestServlet extends HttpServlet
         {
             pwmApplication = ContextManager.getContextManager( req.getServletContext() ).getPwmApplication();
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             outputRestResultBean( restResultBean, req, resp );
             return;
@@ -98,15 +98,13 @@ public abstract class RestServlet extends HttpServlet
         final SessionLabel sessionLabel;
         try
         {
-            sessionLabel = new SessionLabel(
-                    "rest-" + REQUEST_COUNTER.next(),
-                    null,
-                    null,
-                    RequestInitializationFilter.readUserNetworkAddress( req, pwmApplication.getConfig() ),
-                    RequestInitializationFilter.readUserHostname( req, pwmApplication.getConfig() )
-            );
+            sessionLabel =  SessionLabel.builder()
+                    .sessionID( "rest-" + REQUEST_COUNTER.next() )
+                    .sourceAddress( RequestInitializationFilter.readUserNetworkAddress( req, pwmApplication.getConfig() ) )
+                    .sourceHostname( RequestInitializationFilter.readUserHostname( req, pwmApplication.getConfig() ) )
+                    .build();
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             restResultBean = RestResultBean.fromError(
                     e.getErrorInformation(),
@@ -128,9 +126,9 @@ public abstract class RestServlet extends HttpServlet
                 LOGGER.trace( sessionLabel, () -> "incoming HTTP REST request: " + debutTxt );
             }
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
-            LOGGER.error( "error while trying to log HTTP request data " + e.getMessage(), e );
+            LOGGER.error( () -> "error while trying to log HTTP request data " + e.getMessage(), e );
         }
 
         if ( pwmApplication.getApplicationMode() != PwmApplicationMode.RUNNING )
@@ -162,7 +160,7 @@ public abstract class RestServlet extends HttpServlet
 
             restResultBean = invokeWebService( restRequest );
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             restResultBean = RestResultBean.fromError(
                     e.getErrorInformation(),
@@ -172,7 +170,7 @@ public abstract class RestServlet extends HttpServlet
                     pwmApplication.determineIfDetailErrorMsgShown()
             );
         }
-        catch ( Throwable e )
+        catch ( final Throwable e )
         {
             final String errorMsg = "internal error during rest service invocation: " + e.getMessage();
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg );
@@ -196,19 +194,19 @@ public abstract class RestServlet extends HttpServlet
             {
                 return ( RestResultBean ) interestedMethod.invoke( this, restRequest );
             }
-            catch ( InvocationTargetException e )
+            catch ( final InvocationTargetException e )
             {
                 final Throwable rootException = e.getTargetException();
                 if ( rootException instanceof PwmUnrecoverableException )
                 {
                     throw ( PwmUnrecoverableException ) rootException;
                 }
-                LOGGER.error( restRequest.getSessionLabel(), "internal error executing rest request: " + e.getMessage(), e );
+                LOGGER.error( restRequest.getSessionLabel(), () -> "internal error executing rest request: " + e.getMessage(), e );
                 throw PwmUnrecoverableException.newException( PwmError.ERROR_INTERNAL, e.getMessage() );
             }
-            catch ( IllegalAccessException e )
+            catch ( final IllegalAccessException e )
             {
-                LOGGER.error( restRequest.getSessionLabel(), "internal error executing rest request: " + e.getMessage(), e );
+                LOGGER.error( restRequest.getSessionLabel(), () -> "internal error executing rest request: " + e.getMessage(), e );
                 throw PwmUnrecoverableException.newException( PwmError.ERROR_INTERNAL, e.getMessage() );
             }
         }
@@ -235,7 +233,7 @@ public abstract class RestServlet extends HttpServlet
         final MethodMatcher anyMatch = new MethodMatcher();
 
         final Collection<Method> methods = JavaHelper.getAllMethodsForClass( clazz );
-        for ( Method method : methods )
+        for ( final Method method : methods )
         {
             final RestMethodHandler annotation = method.getAnnotation( RestMethodHandler.class );
             final MethodMatcher loopMatch = new MethodMatcher();
@@ -453,7 +451,7 @@ public abstract class RestServlet extends HttpServlet
             {
                 return getChaiProvider().getEntryFactory().newChaiUser( userIdentity.getUserDN() );
             }
-            catch ( ChaiUnavailableException e )
+            catch ( final ChaiUnavailableException e )
             {
                 throw PwmUnrecoverableException.fromChaiException( e );
             }

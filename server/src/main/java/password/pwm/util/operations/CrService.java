@@ -181,9 +181,9 @@ public class CrService implements PwmService
                     }
                 }
             }
-            catch ( ChaiException e )
+            catch ( final ChaiException e )
             {
-                LOGGER.error( sessionLabel, "error reading nmas c/r policy for user " + theUser.getEntryDN() + ": " + e.getMessage() );
+                LOGGER.error( sessionLabel, () -> "error reading nmas c/r policy for user " + theUser.getEntryDN() + ": " + e.getMessage() );
             }
             LOGGER.debug( sessionLabel, () -> "no detected c/r policy for user " + theUser.getEntryDN() + " in nmas" );
         }
@@ -224,10 +224,10 @@ public class CrService implements PwmService
                     challengeSet.getIdentifier()
             );
         }
-        catch ( ChaiValidationException e )
+        catch ( final ChaiValidationException e )
         {
             final String errorMsg = "unexpected error applying policies to nmas challengeset: " + e.getMessage();
-            LOGGER.error( errorMsg, e );
+            LOGGER.error( () -> errorMsg, e );
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg ) );
         }
     }
@@ -262,9 +262,9 @@ public class CrService implements PwmService
                         return profile;
                     }
                 }
-                catch ( PwmUnrecoverableException e )
+                catch ( final PwmUnrecoverableException e )
                 {
-                    LOGGER.error( sessionLabel, "unexpected error while testing password policy profile '" + profile + "', error: " + e.getMessage() );
+                    LOGGER.error( sessionLabel, () -> "unexpected error while testing password policy profile '" + profile + "', error: " + e.getMessage() );
                 }
             }
         }
@@ -514,11 +514,11 @@ public class CrService implements PwmService
                 errorMessages.put( loopWriteMethod, "Success" );
                 successes++;
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
                 final String errorMsg = "error saving responses via " + loopWriteMethod + ", error: " + e.getMessage();
                 errorMessages.put( loopWriteMethod, errorMsg );
-                LOGGER.error( errorMsg );
+                LOGGER.error( () -> errorMsg );
             }
         }
 
@@ -564,9 +564,9 @@ public class CrService implements PwmService
                 operatorMap.get( loopWriteMethod ).clearResponses( userIdentity, theUser, userGUID );
                 successes++;
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
-                LOGGER.error( sessionLabel, "error clearing responses via " + loopWriteMethod + ", error: " + e.getMessage() );
+                LOGGER.error( sessionLabel, () -> "error clearing responses via " + loopWriteMethod + ", error: " + e.getMessage() );
             }
         }
 
@@ -656,7 +656,7 @@ public class CrService implements PwmService
             LOGGER.debug( pwmSession, () -> "checkIfResponseConfigNeeded: " + userIdentity + " has good responses" );
             return false;
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             LOGGER.debug( pwmSession, () -> "checkIfResponseConfigNeeded: " + userIdentity + " does not have good responses: " + e.getMessage() );
             return true;

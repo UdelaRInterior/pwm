@@ -45,8 +45,7 @@ import java.lang.management.ThreadInfo;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.ByteBuffer;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
+
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -163,33 +162,44 @@ public class JavaHelper
         return Collections.unmodifiableList( returnList );
     }
 
+    public static <E extends Enum<E>> Map<String, String> enumMapToStringMap( final Map<E, String> inputMap )
+    {
+        return Collections.unmodifiableMap( inputMap.entrySet().stream()
+                .collect( Collectors.toMap( entry -> entry.getKey().name(), Map.Entry::getValue, ( a, b ) -> b, LinkedHashMap::new ) ) );
+    }
+
     public static <E extends Enum<E>> E readEnumFromString( final Class<E> enumClass, final E defaultValue, final String input )
+    {
+        return readEnumFromString( enumClass, input ).orElse( defaultValue );
+    }
+
+    public static <E extends Enum<E>> Optional<E> readEnumFromString( final Class<E> enumClass, final String input )
     {
         if ( StringUtil.isEmpty( input ) )
         {
-            return defaultValue;
+            return Optional.empty();
         }
 
         if ( enumClass == null || !enumClass.isEnum() )
         {
-            return defaultValue;
+            return Optional.empty();
         }
 
         try
         {
-            return Enum.valueOf( enumClass, input );
+            return Optional.of( Enum.valueOf( enumClass, input ) );
         }
-        catch ( IllegalArgumentException e )
+        catch ( final IllegalArgumentException e )
         {
             /* noop */
             //LOGGER.trace("input=" + input + " does not exist in enumClass=" + enumClass.getSimpleName());
         }
-        catch ( Throwable e )
+        catch ( final Throwable e )
         {
-            LOGGER.warn( "unexpected error translating input=" + input + " to enumClass=" + enumClass.getSimpleName() + ", error: " + e.getMessage() );
+            LOGGER.warn( () -> "unexpected error translating input=" + input + " to enumClass=" + enumClass.getSimpleName() + ", error: " + e.getMessage() );
         }
 
-        return defaultValue;
+        return Optional.empty();
     }
 
     public static String throwableToString( final Throwable throwable )
@@ -250,7 +260,7 @@ public class JavaHelper
 
         final String errorMsg = "unhandled switch statement on parameter class=" + className + ", value=" + paramValue;
         final UnsupportedOperationException exception = new UnsupportedOperationException( errorMsg );
-        LOGGER.warn( errorMsg, exception );
+        LOGGER.warn( () -> errorMsg, exception );
         throw exception;
     }
 
@@ -316,14 +326,13 @@ public class JavaHelper
             return "";
         }
 
-        final DateFormat dateFormat = new SimpleDateFormat(
+        final PwmDateFormat dateFormat = PwmDateFormat.newPwmDateFormat(
                 PwmConstants.DEFAULT_DATETIME_FORMAT_STR,
-                PwmConstants.DEFAULT_LOCALE
+                PwmConstants.DEFAULT_LOCALE,
+                PwmConstants.DEFAULT_TIMEZONE
         );
 
-        dateFormat.setTimeZone( PwmConstants.DEFAULT_TIMEZONE );
-
-        return dateFormat.format( date );
+        return dateFormat.format( date.toInstant() );
     }
 
     public static Instant parseIsoToInstant( final String input )
@@ -343,9 +352,9 @@ public class JavaHelper
         {
             executor.awaitTermination( timeDuration.asMillis(), TimeUnit.MILLISECONDS );
         }
-        catch ( InterruptedException e )
+        catch ( final InterruptedException e )
         {
-            LOGGER.warn( "unexpected error shutting down executor service " + executor.getClass().toString() + " error: " + e.getMessage() );
+            LOGGER.warn( () -> "unexpected error shutting down executor service " + executor.getClass().toString() + " error: " + e.getMessage() );
         }
     }
 
@@ -426,7 +435,7 @@ public class JavaHelper
                 }
             }
 
-            for ( MonitorInfo mi : threadInfo.getLockedMonitors() )
+            for ( final MonitorInfo mi : threadInfo.getLockedMonitors() )
             {
                 if ( mi.getLockedStackDepth() == counter )
                 {
@@ -446,7 +455,7 @@ public class JavaHelper
         {
             sb.append( "\n\tNumber of locked synchronizers = " + locks.length );
             sb.append( '\n' );
-            for ( LockInfo li : locks )
+            for ( final LockInfo li : locks )
             {
                 sb.append( "\t- " + li );
                 sb.append( '\n' );
@@ -544,7 +553,7 @@ public class JavaHelper
             out.flush();
             return byteArrayOutputStream.toByteArray().length;
         }
-        catch ( IOException e )
+        catch ( final IOException e )
         {
             LOGGER.debug( () -> "exception while estimating session size: " + e.getMessage() );
             return 0;
@@ -574,7 +583,7 @@ public class JavaHelper
                         return Optional.ofNullable( uriHost );
                     }
                 }
-                catch ( IllegalArgumentException e )
+                catch ( final IllegalArgumentException e )
                 {
                     LOGGER.trace( () -> " error parsing siteURL hostname: " + e.getMessage() );
                 }
@@ -608,7 +617,7 @@ public class JavaHelper
         {
             return Integer.parseInt( input );
         }
-        catch ( NumberFormatException e )
+        catch ( final NumberFormatException e )
         {
             return defaultValue;
         }
@@ -620,7 +629,7 @@ public class JavaHelper
         {
             return Long.parseLong( input );
         }
-        catch ( NumberFormatException e )
+        catch ( final NumberFormatException e )
         {
             return defaultValue;
         }

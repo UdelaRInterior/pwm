@@ -74,7 +74,7 @@ import password.pwm.util.java.StringUtil;
 import password.pwm.util.java.TimeDuration;
 import password.pwm.util.logging.PwmLogLevel;
 import password.pwm.util.logging.PwmLogger;
-import password.pwm.util.secure.X509Utils;
+import password.pwm.util.secure.CertificateReadingTrustManager;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
@@ -173,8 +173,9 @@ public class PwmHttpClient implements AutoCloseable
             clientBuilder.setSSLContext( sslContext );
             clientBuilder.setSSLSocketFactory( sslConnectionFactory );
             clientBuilder.setConnectionManager( ccm );
+            clientBuilder.setConnectionManagerShared( true );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_INTERNAL, "unexpected error creating promiscuous https client: " + e.getMessage() ) );
         }
@@ -321,7 +322,7 @@ public class PwmHttpClient implements AutoCloseable
         {
             return makeRequestImpl( clientRequest, sessionLabel );
         }
-        catch ( IOException e )
+        catch ( final IOException e )
         {
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_SERVICE_UNREACHABLE, "error while making http request: " + e.getMessage() ), e );
         }
@@ -407,7 +408,7 @@ public class PwmHttpClient implements AutoCloseable
                         ( ( HttpPost ) httpRequest ).setEntity( new StringEntity( requestBody, PwmConstants.DEFAULT_CHARSET ) );
                     }
                 }
-                catch ( URISyntaxException e )
+                catch ( final URISyntaxException e )
                 {
                     throw PwmUnrecoverableException.newException( PwmError.ERROR_INTERNAL, "malformed url: " + clientRequest.getUrl() + ", error: " + e.getMessage() );
                 }
@@ -561,15 +562,16 @@ public class PwmHttpClient implements AutoCloseable
     }
 
     public List<X509Certificate> readServerCertificates()
+            throws PwmUnrecoverableException
     {
         final List<X509Certificate> returnList = new ArrayList<>(  );
         if ( trustManagers != null )
         {
             for ( final TrustManager trustManager : trustManagers )
             {
-                if ( trustManager instanceof X509Utils.CertReaderTrustManager )
+                if ( trustManager instanceof CertificateReadingTrustManager )
                 {
-                    returnList.addAll( ( (X509Utils.CertReaderTrustManager) trustManager ).getCertificates() );
+                    returnList.addAll( ( ( CertificateReadingTrustManager ) trustManager ).getCertificates() );
                 }
             }
         }

@@ -43,6 +43,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 
@@ -120,9 +121,9 @@ public class SharedHistoryManager implements PwmService
             }
 
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.warn( "error checking global history list: " + e.getMessage() );
+            LOGGER.warn( () -> "error checking global history list: " + e.getMessage() );
         }
 
         //LOGGER.trace(pwmSession, "successfully checked word, result=" + result + ", duration=" + new TimeDuration(System.currentTimeMillis(), startTime).asCompactString());
@@ -151,9 +152,9 @@ public class SharedHistoryManager implements PwmService
             {
                 return localDB.size( WORDS_DB );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.error( "error checking wordlist size: " + e.getMessage() );
+                LOGGER.error( () -> "error checking wordlist size: " + e.getMessage() );
                 return 0;
             }
         }
@@ -196,9 +197,9 @@ public class SharedHistoryManager implements PwmService
         {
             checkDbVersion();
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error checking db version", e );
+            LOGGER.error( () -> "error checking db version", e );
             status = STATUS.CLOSED;
             return;
         }
@@ -218,9 +219,9 @@ public class SharedHistoryManager implements PwmService
                 LOGGER.trace( () -> "oldest timestamp loaded from localDB, age is " + TimeDuration.fromCurrent( oldestEntry ).asCompactString() );
             }
         }
-        catch ( LocalDBException e )
+        catch ( final LocalDBException e )
         {
-            LOGGER.error( "unexpected error loading oldest-entry meta record, will remain closed: " + e.getMessage(), e );
+            LOGGER.error( () -> "unexpected error loading oldest-entry meta record, will remain closed: " + e.getMessage(), e );
             status = STATUS.CLOSED;
             return;
         }
@@ -233,9 +234,9 @@ public class SharedHistoryManager implements PwmService
                     + ", maxAgeMs=" + TimeDuration.of( maxAgeMs, TimeDuration.Unit.MILLISECONDS ).asCompactString()
                     + ", oldestEntry=" + TimeDuration.fromCurrent( oldestEntry ).asCompactString() );
         }
-        catch ( LocalDBException e )
+        catch ( final LocalDBException e )
         {
-            LOGGER.error( "unexpected error examining size of DB, will remain closed: " + e.getMessage(), e );
+            LOGGER.error( () -> "unexpected error examining size of DB, will remain closed: " + e.getMessage(), e );
             status = STATUS.CLOSED;
             return;
         }
@@ -302,9 +303,9 @@ public class SharedHistoryManager implements PwmService
                     + " (" + TimeDuration.compactFromCurrent( startTime ) + ")"
                     + " (" + this.size() + " total words)" );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.warn( sessionLabel, "error adding word to global history list: " + e.getMessage() );
+            LOGGER.warn( sessionLabel, () -> "error adding word to global history list: " + e.getMessage() );
         }
     }
 
@@ -335,9 +336,9 @@ public class SharedHistoryManager implements PwmService
             {
                 reduceWordDB();
             }
-            catch ( LocalDBException e )
+            catch ( final LocalDBException e )
             {
-                LOGGER.error( "error during old record purge: " + e.getMessage() );
+                LOGGER.error( () -> "error during old record purge: " + e.getMessage() );
             }
         }
 
@@ -369,14 +370,15 @@ public class SharedHistoryManager implements PwmService
             LOGGER.debug( () -> "beginning wordDB reduce operation, examining " + initialSize
                     + " words for entries older than " + TimeDuration.asCompactString( settings.maxAgeMs ) );
 
-            LocalDB.LocalDBIterator<String> keyIterator = null;
+            LocalDB.LocalDBIterator<Map.Entry<String, String>> keyIterator = null;
             try
             {
                 keyIterator = localDB.iterator( WORDS_DB );
                 while ( status == STATUS.OPEN && keyIterator.hasNext() )
                 {
-                    final String key = keyIterator.next();
-                    final String value = localDB.get( WORDS_DB, key );
+                    final Map.Entry<String, String> entry = keyIterator.next();
+                    final String key = entry.getKey();
+                    final String value = entry.getValue();
                     final long timeStamp = Long.parseLong( value );
                     final long entryAge = System.currentTimeMillis() - timeStamp;
 
@@ -406,9 +408,9 @@ public class SharedHistoryManager implements PwmService
                         keyIterator.close();
                     }
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
-                    LOGGER.warn( "error returning LocalDB iterator: " + e.getMessage() );
+                    LOGGER.warn( () -> "error returning LocalDB iterator: " + e.getMessage() );
                 }
             }
 
@@ -465,7 +467,7 @@ public class SharedHistoryManager implements PwmService
             this.salt = localDB.get( META_DB, KEY_SALT );
             if ( salt == null || salt.length() < saltLength )
             {
-                LOGGER.warn( "stored global salt value is not present, creating new salt" );
+                LOGGER.warn( () -> "stored global salt value is not present, creating new salt" );
                 this.salt = PwmRandom.getInstance().alphaNumericString( saltLength );
                 localDB.put( META_DB, KEY_SALT, this.salt );
                 needsClearing = true;
@@ -479,9 +481,9 @@ public class SharedHistoryManager implements PwmService
             {
                 localDB.truncate( WORDS_DB );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.error( "error during wordlist truncate", e );
+                LOGGER.error( () -> "error during wordlist truncate", e );
             }
         }
 

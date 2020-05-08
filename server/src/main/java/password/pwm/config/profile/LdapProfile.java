@@ -173,9 +173,9 @@ public class LdapProfile extends AbstractProfile implements Profile
                     LOGGER.trace( () -> "read and cached canonical ldap DN value for input '" + dnValue + "' as '" + finalCanonical + "'" );
                 }
             }
-            catch ( ChaiUnavailableException | ChaiOperationException e )
+            catch ( final ChaiUnavailableException | ChaiOperationException e )
             {
-                LOGGER.error( "error while reading canonicalDN for dn value '" + dnValue + "', error: " + e.getMessage() );
+                LOGGER.error( () -> "error while reading canonicalDN for dn value '" + dnValue + "', error: " + e.getMessage() );
                 return dnValue;
             }
         }

@@ -38,6 +38,8 @@ import password.pwm.util.java.JavaHelper;
 import password.pwm.util.java.StringUtil;
 import password.pwm.util.logging.PwmLogger;
 import password.pwm.util.macro.MacroMachine;
+import password.pwm.util.secure.PwmTrustManager;
+import password.pwm.util.secure.CertificateReadingTrustManager;
 import password.pwm.util.secure.X509Utils;
 
 import javax.mail.Message;
@@ -118,7 +120,7 @@ public class EmailServerUtil
         }
         else
         {
-            LOGGER.warn( "discarding incompletely configured email address for smtp server profile " + id );
+            LOGGER.warn( () -> "discarding incompletely configured email address for smtp server profile " + id );
         }
 
         return Optional.empty();
@@ -132,7 +134,7 @@ public class EmailServerUtil
         {
             return X509Utils.getDefaultJavaTrustManager( configuration );
         }
-        final TrustManager certMatchingTrustManager = new X509Utils.CertMatchingTrustManager( configuration, configuredCerts );
+        final TrustManager certMatchingTrustManager = PwmTrustManager.createPwmTrustManager( configuration, configuredCerts );
         return new TrustManager[]
                 {
                         certMatchingTrustManager,
@@ -186,7 +188,7 @@ public class EmailServerUtil
             properties.put( "mail.smtp.starttls.enable", useStartTls );
             properties.put( "mail.smtp.starttls.required", useStartTls );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String msg = "unable to create message transport properties: " + e.getMessage();
             throw new PwmUnrecoverableException( PwmError.CONFIG_FORMAT_ERROR, msg );
@@ -222,9 +224,9 @@ public class EmailServerUtil
             {
                 address.setPersonal( splitString[ 0 ].trim(), PwmConstants.DEFAULT_CHARSET.toString() );
             }
-            catch ( UnsupportedEncodingException e )
+            catch ( final UnsupportedEncodingException e )
             {
-                LOGGER.error( "unsupported encoding error while parsing internet address '" + input + "', error: " + e.getMessage() );
+                LOGGER.error( () -> "unsupported encoding error while parsing internet address '" + input + "', error: " + e.getMessage() );
             }
             return address;
         }
@@ -386,8 +388,8 @@ public class EmailServerUtil
             throws PwmUnrecoverableException
     {
         final EmailServerProfile emailServerProfile = configuration.getEmailServerProfiles().get( profile );
-        final X509Utils.CertReaderTrustManager certReaderTm = new X509Utils.CertReaderTrustManager(
-                new X509Utils.PromiscuousTrustManager(),
+        final CertificateReadingTrustManager certReaderTm = CertificateReadingTrustManager.newCertReaderTrustManager(
+                configuration,
                 X509Utils.ReadCertificateFlag.ReadOnlyRootCA );
         final TrustManager[] trustManagers =  new TrustManager[]
                 {
@@ -400,7 +402,7 @@ public class EmailServerUtil
             {
                 return certReaderTm.getCertificates();
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 final String exceptionMessage = JavaHelper.readHostileExceptionMessage( e );
                 final String errorMsg = "error connecting to secure server while reading SMTP certificates: " + exceptionMessage;

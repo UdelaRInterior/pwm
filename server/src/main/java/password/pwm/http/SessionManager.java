@@ -59,13 +59,14 @@ public class SessionManager
 
     private static final PwmLogger LOGGER = PwmLogger.forClass( SessionManager.class );
 
-    private ChaiProvider chaiProvider;
+    private volatile ChaiProvider chaiProvider;
 
+    private final PwmApplication pwmApplication;
     private final PwmSession pwmSession;
 
-
-    public SessionManager( final PwmSession pwmSession )
+    public SessionManager( final PwmApplication pwmApplication, final PwmSession pwmSession )
     {
+        this.pwmApplication = pwmApplication;
         this.pwmSession = pwmSession;
     }
 
@@ -96,7 +97,7 @@ public class SessionManager
         this.chaiProvider = chaiProvider;
     }
 
-    public void updateUserPassword( final PwmApplication pwmApplication, final UserIdentity userIdentity, final PasswordData userPassword )
+    public void updateUserPassword( final UserIdentity userIdentity, final PasswordData userPassword )
             throws PwmUnrecoverableException
     {
         this.closeConnections();
@@ -114,7 +115,7 @@ public class SessionManager
             final String userDN = userIdentity.getUserDN();
             chaiProvider.getEntryFactory().newChaiEntry( userDN ).exists();
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             final ErrorInformation errorInformation = new ErrorInformation(
                     PwmError.ERROR_DIRECTORY_UNAVAILABLE,
@@ -130,18 +131,18 @@ public class SessionManager
         {
             try
             {
-                LOGGER.debug( pwmSession, () -> "closing user ldap connection" );
+                LOGGER.debug( pwmSession.getLabel(), () -> "closing user ldap connection" );
                 chaiProvider.close();
                 chaiProvider = null;
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.error( pwmSession, "error while closing user connection: " + e.getMessage() );
+                LOGGER.error( pwmSession.getLabel(), () -> "error while closing user connection: " + e.getMessage() );
             }
         }
     }
 
-    public ChaiUser getActor( final PwmApplication pwmApplication )
+    public ChaiUser getActor( )
             throws ChaiUnavailableException, PwmUnrecoverableException
     {
 
@@ -160,12 +161,7 @@ public class SessionManager
         return this.getChaiProvider().getEntryFactory().newChaiUser( userDN.getUserDN() );
     }
 
-    public boolean hasActiveLdapConnection( )
-    {
-        return this.chaiProvider != null && this.chaiProvider.isConnected();
-    }
-
-    public ChaiUser getActor( final PwmApplication pwmApplication, final UserIdentity userIdentity )
+    public ChaiUser getActor( final UserIdentity userIdentity )
             throws PwmUnrecoverableException
     {
         try
@@ -182,7 +178,7 @@ public class SessionManager
             final ChaiProvider provider = this.getChaiProvider();
             return provider.getEntryFactory().newChaiUser( userIdentity.getUserDN() );
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             throw PwmUnrecoverableException.fromChaiException( e );
         }
@@ -195,7 +191,7 @@ public class SessionManager
             this.pwmSession.getLoginInfoBean().setReqCounter(
                     this.pwmSession.getLoginInfoBean().getReqCounter() + 1 );
 
-            LOGGER.trace( pwmSession, () -> "incremented request counter to " + this.pwmSession.getLoginInfoBean().getReqCounter() );
+            LOGGER.trace( pwmSession.getLabel(), () -> "incremented request counter to " + this.pwmSession.getLoginInfoBean().getReqCounter() );
         }
     }
 
@@ -205,14 +201,14 @@ public class SessionManager
         final boolean devDebugMode = pwmApplication.getConfig().isDevDebugMode();
         if ( devDebugMode )
         {
-            LOGGER.trace( pwmSession, () -> String.format( "entering checkPermission(%s, %s, %s)", permission, pwmSession, pwmApplication ) );
+            LOGGER.trace( pwmSession.getLabel(), () -> String.format( "entering checkPermission(%s, %s, %s)", permission, pwmSession, pwmApplication ) );
         }
 
         if ( !pwmSession.isAuthenticated() )
         {
             if ( devDebugMode )
             {
-                LOGGER.trace( pwmSession, () -> "user is not authenticated, returning false for permission check" );
+                LOGGER.trace( pwmSession.getLabel(), () -> "user is not authenticated, returning false for permission check" );
             }
             return false;
         }
@@ -222,7 +218,7 @@ public class SessionManager
         {
             if ( devDebugMode )
             {
-                LOGGER.debug( pwmSession,
+                LOGGER.debug( pwmSession.getLabel(),
                         () -> String.format( "checking permission %s for user %s", permission.toString(), pwmSession.getUserInfo().getUserIdentity().toDelimitedKey() ) );
             }
 
@@ -234,7 +230,7 @@ public class SessionManager
 
             {
                 final Permission.PermissionStatus finalStatus = status;
-                LOGGER.debug( pwmSession,
+                LOGGER.debug( pwmSession.getLabel(),
                         () -> String.format( "permission %s for user %s is %s",
                                 permission.toString(),
                                 pwmSession.isAuthenticated()
@@ -246,7 +242,7 @@ public class SessionManager
         return status == Permission.PermissionStatus.GRANTED;
     }
 
-    public MacroMachine getMacroMachine( final PwmApplication pwmApplication )
+    public MacroMachine getMacroMachine( )
             throws PwmUnrecoverableException
     {
         final UserInfo userInfoBean = pwmSession.isAuthenticated()
@@ -269,27 +265,27 @@ public class SessionManager
         return null;
     }
 
-    public HelpdeskProfile getHelpdeskProfile( final PwmApplication pwmApplication ) throws PwmUnrecoverableException
+    public HelpdeskProfile getHelpdeskProfile() throws PwmUnrecoverableException
     {
         return ( HelpdeskProfile ) getProfile( pwmApplication, ProfileDefinition.Helpdesk );
     }
 
-    public SetupOtpProfile getSetupOTPProfile( final PwmApplication pwmApplication ) throws PwmUnrecoverableException
+    public SetupOtpProfile getSetupOTPProfile() throws PwmUnrecoverableException
     {
         return ( SetupOtpProfile ) getProfile( pwmApplication, ProfileDefinition.SetupOTPProfile );
     }
 
-    public UpdateProfileProfile getUpdateAttributeProfile( final PwmApplication pwmApplication ) throws PwmUnrecoverableException
+    public UpdateProfileProfile getUpdateAttributeProfile() throws PwmUnrecoverableException
     {
         return ( UpdateProfileProfile ) getProfile( pwmApplication, ProfileDefinition.UpdateAttributes );
     }
 
-    public PeopleSearchProfile getPeopleSearchProfile( final PwmApplication pwmApplication ) throws PwmUnrecoverableException
+    public PeopleSearchProfile getPeopleSearchProfile() throws PwmUnrecoverableException
     {
         return ( PeopleSearchProfile ) getProfile( pwmApplication, ProfileDefinition.PeopleSearch );
     }
 
-    public DeleteAccountProfile getSelfDeleteProfile( final PwmApplication pwmApplication ) throws PwmUnrecoverableException
+    public DeleteAccountProfile getSelfDeleteProfile() throws PwmUnrecoverableException
     {
         return ( DeleteAccountProfile ) getProfile( pwmApplication, ProfileDefinition.DeleteAccount );
     }

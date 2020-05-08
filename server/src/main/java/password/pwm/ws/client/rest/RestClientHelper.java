@@ -84,15 +84,15 @@ public class RestClientHelper
             if ( httpResponse.getStatusCode() != 200 )
             {
                 final String errorMsg = "received non-200 response code (" + httpResponse.getStatusCode() + ") when executing web-service";
-                LOGGER.error( errorMsg );
+                LOGGER.error( () -> errorMsg );
                 throw new PwmOperationalException( new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg ) );
             }
             return responseBody;
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMsg = "http response error while executing external rest call, error: " + e.getMessage();
-            LOGGER.error( errorMsg );
+            LOGGER.error( () -> errorMsg );
             throw new PwmOperationalException( new ErrorInformation( PwmError.ERROR_INTERNAL, errorMsg ), e );
         }
     }
