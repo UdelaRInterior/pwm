@@ -120,7 +120,6 @@ public abstract class PwmConstants
 
     public static final PwmHashAlgorithm SETTING_CHECKSUM_HASH_METHOD = PwmHashAlgorithm.SHA256;
 
-
     public static final String LOG_REMOVED_VALUE_REPLACEMENT = readPwmConstantsBundle( "log.removedValue" );
 
     public static final Collection<Locale> INCLUDED_LOCALES;
