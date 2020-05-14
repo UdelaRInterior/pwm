@@ -812,14 +812,15 @@ class NewUserUtils
                 }
             }
             br.close();
-            
+
             if ( !present )
             {
               line = null;
               while ( ( line = brnot.readLine() ) != null )
               {
+                  String group = line;
                   final LdapAction customAction = LdapAction.builder().attributeName( "memberof" )
-                  .attributeValue( line )
+                  .attributeValue( group )
                   .ldapMethod( ActionConfiguration.LdapMethod.add )
                   .build();
                   actions.get( 0 ).getLdapActions().add( customAction );
