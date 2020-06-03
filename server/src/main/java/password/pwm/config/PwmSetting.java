@@ -840,6 +840,10 @@ public enum PwmSetting
             "newUser.form", PwmSettingSyntax.FORM, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_WRITE_ATTRIBUTES(
             "newUser.writeAttributes", PwmSettingSyntax.ACTION, PwmSettingCategory.NEWUSER_PROFILE ),
+    NEWUSER_WRITE_ATTRIBUTES_NOT_DOMAINS(
+            "newUser.writeAttributesNotDomains", PwmSettingSyntax.ACTION, PwmSettingCategory.NEWUSER_PROFILE ),
+    NEWUSER_WRITE_ATTRIBUTES_NULL(
+            "newUser.writeAttributesNull", PwmSettingSyntax.ACTION, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_DELETE_ON_FAIL(
             "newUser.deleteOnFail", PwmSettingSyntax.BOOLEAN, PwmSettingCategory.NEWUSER_PROFILE ),
     NEWUSER_LOGOUT_AFTER_CREATION(

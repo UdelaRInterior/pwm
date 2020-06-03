@@ -93,6 +93,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import password.pwm.config.value.data.ActionConfiguration.LdapAction;
 
 class NewUserUtils
@@ -314,24 +315,31 @@ class NewUserUtils
         {
 
             // execute configured actions
-            final List<ActionConfiguration> actions = newUserProfile.readSettingAsAction(
+            final ActionExecutor actionExecutor = new ActionExecutor.ActionExecutorSettings( pwmApplication, userIdentity )
+                    .setExpandPwmMacros( true )
+                    .setMacroMachine( pwmSession.getSessionManager().getMacroMachine( pwmApplication ) )
+                    .createActionExecutor();
+
+            // add common groups
+            List<ActionConfiguration> actions = new ArrayList<ActionConfiguration>();
+            actions = NewUserServlet.getNewUserProfile( pwmRequest ).readSettingAsAction(
                     PwmSetting.NEWUSER_WRITE_ATTRIBUTES );
 
             // add groups to email
-        addGroupsByEmail( newUserForm.getFormData().get( "mail" ), actions );
-
             if ( actions != null && !actions.isEmpty() )
             {
                 NewUserUtils.LOGGER.debug( pwmSession, () -> "executing configured actions to user " + theUser.getEntryDN() );
-
-                final ActionExecutor actionExecutor = new ActionExecutor.ActionExecutorSettings( pwmApplication, userIdentity )
-                        .setExpandPwmMacros( true )
-                        .setMacroMachine( pwmSession.getSessionManager().getMacroMachine( pwmApplication ) )
-                        .createActionExecutor();
-
                 actionExecutor.executeActions( actions, pwmSession.getLabel() );
             }
+            // reset actions to null
+            actions = NewUserServlet.getNewUserProfile( pwmRequest ).readSettingAsAction(
+                    PwmSetting.NEWUSER_WRITE_ATTRIBUTES_NULL );
+            actions.get(0).getLdapActions().clear();
+
+            // check other groups
+            addGroupsByEmail( newUserForm.getFormData().get( "mail" ), actions, pwmRequest, pwmSession, actionExecutor);
         }
+
 
         // send user email
         sendNewUserEmailConfirmation( pwmRequest );
@@ -779,34 +787,33 @@ class NewUserUtils
         return null;
     }
 
-    private static void addGroupsByEmail( final String mail, final List<ActionConfiguration> actions )
+    private static void addGroupsByEmail( final String mail, List<ActionConfiguration> actions, PwmRequest pwmRequest, PwmSession pwmSession, ActionExecutor actionExecutor)
     {
-        final String[] container = mail.split( "@" );
-        final String domain = container[1];
-        final String path = new File( PwmConstants.URL_CONFIG_DOMAINS ).getAbsolutePath();
-        final String pathnot = new File( PwmConstants.URL_CONFIG_NOT_DOMAINS ).getAbsolutePath();
-
+        String[] container = mail.split( "@" );
+        String domain = container[1];
+        String path = new File( PwmConstants.URL_CONFIG_DOMAINS ).getAbsolutePath();
+        Charset charset = StandardCharsets.UTF_8;
         try (
-              BufferedReader br = new BufferedReader( new FileReader( path, StandardCharsets.UTF_8 ) );
-              BufferedReader brnot = new BufferedReader( new FileReader( pathnot, StandardCharsets.UTF_8 ) );
-            )
+                BufferedReader br = new BufferedReader( new FileReader( path, charset ) );
+        )
         {
             String line = null;
             Boolean present = false;
             while ( ( line = br.readLine() ) != null )
             {
-                final String[] items = line.split( ":" );
+                String[] items = line.split( ":" );
                 if ( domain.equals( items[0] ) )
                 {
                     for ( int i = 1; i < items.length; i++ )
                     {
-                        final LdapAction customAction = LdapAction.builder().attributeName( "memberof" )
-                        .attributeValue( items[i] )
-                        .ldapMethod( ActionConfiguration.LdapMethod.add )
-                        .build();
-
+                        LdapAction customAction = LdapAction.builder().attributeName( "memberof" )
+                            .attributeValue( items[i] )
+                            .ldapMethod( ActionConfiguration.LdapMethod.add )
+                            .build();
                         actions.get( 0 ).getLdapActions().add( customAction );
                     }
+
+                    actionExecutor.executeActions( actions, pwmSession.getLabel() );
                     present = true;
                     break;
                 }
@@ -815,20 +822,12 @@ class NewUserUtils
 
             if ( !present )
             {
-              line = null;
-              while ( ( line = brnot.readLine() ) != null )
-              {
-                  String group = line;
-                  final LdapAction customAction = LdapAction.builder().attributeName( "memberof" )
-                  .attributeValue( group )
-                  .ldapMethod( ActionConfiguration.LdapMethod.add )
-                  .build();
-                  actions.get( 0 ).getLdapActions().add( customAction );
-              }
-              brnot.close();
+                actions = NewUserServlet.getNewUserProfile( pwmRequest ).readSettingAsAction(
+                        PwmSetting.NEWUSER_WRITE_ATTRIBUTES_NOT_DOMAINS );
+                actionExecutor.executeActions( actions, pwmSession.getLabel() );
             }
         }
-        catch ( IOException e )
+        catch (IOException | PwmUnrecoverableException | PwmOperationalException e )
         {
             e.printStackTrace();
         }
