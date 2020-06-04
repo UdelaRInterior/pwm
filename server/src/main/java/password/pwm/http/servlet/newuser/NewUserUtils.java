@@ -79,6 +79,9 @@ import password.pwm.PwmConstants;
 
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -90,10 +93,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.io.File;
-import java.io.FileReader;
 import java.io.BufferedReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.charset.Charset;
 import password.pwm.config.value.data.ActionConfiguration.LdapAction;
 
 class NewUserUtils
@@ -791,10 +792,9 @@ class NewUserUtils
     {
         String[] container = mail.split( "@" );
         String domain = container[1];
-        String path = new File( PwmConstants.URL_CONFIG_DOMAINS ).getAbsolutePath();
-        Charset charset = StandardCharsets.UTF_8;
+        Path path = Paths.get(new File( PwmConstants.URL_CONFIG_DOMAINS ).getAbsolutePath());
         try (
-                BufferedReader br = new BufferedReader( new FileReader( path, charset ) );
+                BufferedReader br = Files.newBufferedReader( path, StandardCharsets.UTF_8 );
         )
         {
             String line = null;
@@ -812,10 +812,7 @@ class NewUserUtils
                             .build();
                         actions.get( 0 ).getLdapActions().add( customAction );
                     }
-
-                    actionExecutor.executeActions( actions, pwmSession.getLabel() );
                     present = true;
-                    break;
                 }
             }
             br.close();
@@ -824,6 +821,9 @@ class NewUserUtils
             {
                 actions = NewUserServlet.getNewUserProfile( pwmRequest ).readSettingAsAction(
                         PwmSetting.NEWUSER_WRITE_ATTRIBUTES_NOT_DOMAINS );
+                actionExecutor.executeActions( actions, pwmSession.getLabel() );
+            } else
+            {
                 actionExecutor.executeActions( actions, pwmSession.getLabel() );
             }
         }
