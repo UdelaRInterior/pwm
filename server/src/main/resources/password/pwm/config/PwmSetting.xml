@@ -2731,6 +2731,14 @@
         <ldapPermission actor="proxy" access="write"/>
         <default />
     </setting>
+    <setting hidden="false" key="newUser.writeAttributesNull" level="1">
+        <ldapPermission actor="proxy" access="write"/>
+        <default />
+    </setting>
+    <setting hidden="false" key="newUser.writeAttributesNotDomains" level="1">
+        <ldapPermission actor="proxy" access="write"/>
+        <default />
+    </setting>
     <setting hidden="false" key="newUser.deleteOnFail" level="2">
         <default>
             <value>true</value>
