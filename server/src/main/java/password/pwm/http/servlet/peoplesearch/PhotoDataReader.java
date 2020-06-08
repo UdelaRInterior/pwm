@@ -123,7 +123,7 @@ public class PhotoDataReader
             return true;
         }
 
-        final boolean hasPermission = LdapPermissionTester.testUserPermissions( pwmRequest.getPwmApplication(), pwmRequest.getSessionLabel(), userIdentity, permissions );
+        final boolean hasPermission = LdapPermissionTester.testUserPermissions( pwmRequest.getPwmApplication(), pwmRequest.getLabel(), userIdentity, permissions );
         if ( !hasPermission )
         {
             LOGGER.debug( pwmRequest, () -> "user " + userIdentity + " failed photo query filter, denying photo view ("
@@ -240,7 +240,7 @@ public class PhotoDataReader
                     .method( HttpMethod.GET )
                     .url( overrideURL.get() )
                     .build();
-            final PwmHttpClientResponse response = pwmHttpClient.makeRequest( clientRequest, pwmRequest.getSessionLabel() );
+            final PwmHttpClientResponse response = pwmHttpClient.makeRequest( clientRequest, pwmRequest.getLabel() );
             if ( response != null )
             {
                 final ImmutableByteArray bodyContents = response.getBinaryBody();
@@ -252,7 +252,7 @@ public class PhotoDataReader
             }
             return Optional.empty();
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String msg = "error reading remote http photo data: " + JavaHelper.readHostileExceptionMessage( e );
             throw new PwmOperationalException( new ErrorInformation( PwmError.ERROR_SERVICE_UNREACHABLE, msg ) );
@@ -300,7 +300,7 @@ public class PhotoDataReader
                 }
             }
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             LOGGER.debug( pwmRequest, () -> "error reading user photo data: " + e.getMessage() );
             if ( !pwmRequest.getPwmResponse().isCommitted() )

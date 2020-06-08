@@ -101,14 +101,14 @@ class ResourceServletConfiguration
                         zipResources.put( ResourceFileServlet.RESOURCE_PATH + configuredZipFileResource.getUrl(), zipFile );
                         LOGGER.debug( () -> "registered resource-zip file " + configuredZipFileResource.getZipFile() + " at path " + zipFileFile.getAbsolutePath() );
                     }
-                    catch ( IOException e )
+                    catch ( final IOException e )
                     {
-                        LOGGER.warn( "unable to resource-zip file " + configuredZipFileResource + ", error: " + e.getMessage() );
+                        LOGGER.warn( () -> "unable to resource-zip file " + configuredZipFileResource + ", error: " + e.getMessage() );
                     }
                 }
                 else
                 {
-                    LOGGER.error( "can't register resource-zip file " + configuredZipFileResource.getZipFile() + " because WEB-INF path is unknown" );
+                    LOGGER.error( () -> "can't register resource-zip file " + configuredZipFileResource.getZipFile() + " because WEB-INF path is unknown" );
                 }
             }
         }
@@ -127,9 +127,9 @@ class ResourceServletConfiguration
                 customFileBundle.clear();
                 customFileBundle.putAll( customFiles );
             }
-            catch ( IOException e )
+            catch ( final IOException e )
             {
-                LOGGER.error( "error assembling memory file map zip bundle: " + e.getMessage() );
+                LOGGER.error( () -> "error assembling memory file map zip bundle: " + e.getMessage() );
             }
         }
 

@@ -120,16 +120,16 @@ public class RestFormDataClient
             if ( httpResponse.getStatusCode() != 200 )
             {
                 final String errorMsg = "received non-200 response code (" + httpResponse.getStatusCode() + ") when executing web-service";
-                LOGGER.error( errorMsg );
+                LOGGER.error( () -> errorMsg );
                 throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_SERVICE_UNREACHABLE, errorMsg ) );
             }
             final FormDataResponseBean formDataResponseBean = JsonUtil.deserialize( responseBody, FormDataResponseBean.class );
             return formDataResponseBean;
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             final String errorMsg = "http response error while executing external rest call, error: " + e.getMessage();
-            LOGGER.error( errorMsg );
+            LOGGER.error( () -> errorMsg );
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_SERVICE_UNREACHABLE, errorMsg ), e );
         }
 

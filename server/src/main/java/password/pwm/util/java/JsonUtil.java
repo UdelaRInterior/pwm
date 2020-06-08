@@ -31,6 +31,7 @@ import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 import com.google.gson.reflect.TypeToken;
 import com.novell.ldapchai.cr.ChallengeSet;
+import password.pwm.PwmConstants;
 import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.ldap.PwmLdapVendor;
 import password.pwm.util.PasswordData;
@@ -45,7 +46,6 @@ import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.text.DateFormat;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Date;
@@ -164,7 +164,7 @@ public class JsonUtil
             {
                 return new JsonPrimitive( StringUtil.base64Encode( cert.getEncoded() ) );
             }
-            catch ( CertificateEncodingException e )
+            catch ( final CertificateEncodingException e )
             {
                 throw new IllegalStateException( "unable to json-encode certificate: " + e.getMessage() );
             }
@@ -179,7 +179,7 @@ public class JsonUtil
                 return ( X509Certificate ) certificateFactory.generateCertificate( new ByteArrayInputStream( StringUtil.base64Decode(
                         jsonElement.getAsString() ) ) );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 throw new JsonParseException( "unable to parse x509certificate: " + e.getMessage() );
             }
@@ -191,16 +191,16 @@ public class JsonUtil
      */
     private static class DateTypeAdapter implements JsonSerializer<Date>, JsonDeserializer<Date>
     {
-        private static final DateFormat ISO_DATE_FORMAT;
-        private static final DateFormat GSON_DATE_FORMAT;
+        private static final PwmDateFormat ISO_DATE_FORMAT = PwmDateFormat.newPwmDateFormat(
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                PwmConstants.DEFAULT_LOCALE,
+                TimeZone.getTimeZone( "Zulu" ) );
 
-        static
+        private DateFormat getGsonDateFormat()
         {
-            ISO_DATE_FORMAT = new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss'Z'" );
-            ISO_DATE_FORMAT.setTimeZone( TimeZone.getTimeZone( "Zulu" ) );
-
-            GSON_DATE_FORMAT = DateFormat.getDateTimeInstance( DateFormat.DEFAULT, DateFormat.DEFAULT );
-            GSON_DATE_FORMAT.setTimeZone( TimeZone.getDefault() );
+            final DateFormat gsonDateFormat = DateFormat.getDateTimeInstance( DateFormat.DEFAULT, DateFormat.DEFAULT );
+            gsonDateFormat.setTimeZone( TimeZone.getDefault() );
+            return gsonDateFormat;
         }
 
         private DateTypeAdapter( )
@@ -209,16 +209,16 @@ public class JsonUtil
 
         public synchronized JsonElement serialize( final Date date, final Type type, final JsonSerializationContext jsonSerializationContext )
         {
-            return new JsonPrimitive( ISO_DATE_FORMAT.format( date ) );
+            return new JsonPrimitive( ISO_DATE_FORMAT.format( date.toInstant() ) );
         }
 
         public synchronized Date deserialize( final JsonElement jsonElement, final Type type, final JsonDeserializationContext jsonDeserializationContext )
         {
             try
             {
-                return ISO_DATE_FORMAT.parse( jsonElement.getAsString() );
+                return Date.from( ISO_DATE_FORMAT.parse( jsonElement.getAsString() ) );
             }
-            catch ( ParseException e )
+            catch ( final ParseException e )
             {
                 /* noop */
             }
@@ -226,9 +226,9 @@ public class JsonUtil
             // for backwards compatibility
             try
             {
-                return GSON_DATE_FORMAT.parse( jsonElement.getAsString() );
+                return getGsonDateFormat().parse( jsonElement.getAsString() );
             }
-            catch ( ParseException e )
+            catch ( final ParseException e )
             {
                 LOGGER.debug( () -> "unable to parse stored json Date.class timestamp '" + jsonElement.getAsString() + "' error: " + e.getMessage() );
                 throw new JsonParseException( e );
@@ -256,7 +256,7 @@ public class JsonUtil
             {
                 return JavaHelper.parseIsoToInstant( jsonElement.getAsString() );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 LOGGER.debug( () -> "unable to parse stored json Instant.class timestamp '" + jsonElement.getAsString() + "' error: " + e.getMessage() );
                 throw new JsonParseException( e );
@@ -276,7 +276,7 @@ public class JsonUtil
             {
                 return null;
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 LOGGER.debug( () -> "unable to parse stored json ChallengeSet.class timestamp '" + jsonElement.getAsString() + "' error: " + e.getMessage() );
                 throw new JsonParseException( e );
@@ -292,10 +292,10 @@ public class JsonUtil
             {
                 return StringUtil.base64Decode( json.getAsString() );
             }
-            catch ( IOException e )
+            catch ( final IOException e )
             {
                 final String errorMsg = "io stream error while de-serializing byte array: " + e.getMessage();
-                LOGGER.error( errorMsg );
+                LOGGER.error( () -> errorMsg );
                 throw new JsonParseException( errorMsg, e );
             }
         }
@@ -306,10 +306,10 @@ public class JsonUtil
             {
                 return new JsonPrimitive( StringUtil.base64Encode( src, StringUtil.Base64Options.GZIP ) );
             }
-            catch ( IOException e )
+            catch ( final IOException e )
             {
                 final String errorMsg = "io stream error while serializing byte array: " + e.getMessage();
-                LOGGER.error( errorMsg );
+                LOGGER.error( () -> errorMsg );
                 throw new JsonParseException( errorMsg, e );
             }
         }
@@ -323,10 +323,10 @@ public class JsonUtil
             {
                 return new PasswordData( json.getAsString() );
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
                 final String errorMsg = "error while deserializing password data: " + e.getMessage();
-                LOGGER.error( errorMsg );
+                LOGGER.error( () -> errorMsg );
                 throw new JsonParseException( errorMsg, e );
             }
         }
@@ -337,10 +337,10 @@ public class JsonUtil
             {
                 return new JsonPrimitive( src.getStringValue() );
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
                 final String errorMsg = "error while serializing password data: " + e.getMessage();
-                LOGGER.error( errorMsg );
+                LOGGER.error( () -> errorMsg );
                 throw new JsonParseException( errorMsg, e );
             }
         }

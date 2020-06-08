@@ -50,6 +50,7 @@ import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.time.Instant;
+import java.util.AbstractMap;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -119,6 +120,29 @@ public class XodusLocalDB implements LocalDBProvider
 
         final EnvironmentConfig environmentConfig = makeEnvironmentConfig( initParameters );
 
+        if ( Files.exists( getDirtyFile().toPath() ) )
+        {
+            environmentConfig.setGcUtilizationFromScratch( true );
+            LOGGER.warn( () -> "environment not closed cleanly, will re-calculate GC" );
+        }
+        else
+        {
+            LOGGER.debug( () -> "environment was closed cleanly" );
+        }
+
+        try
+        {
+            if ( !getDirtyFile().exists() )
+            {
+                Files.createFile( getDirtyFile().toPath() );
+                LOGGER.trace( () -> "created openLock file" );
+            }
+        }
+        catch ( final IOException e )
+        {
+            LOGGER.error( () -> "error creating openLock file: " + e.getMessage() );
+        }
+
         {
             final boolean compressionEnabled = initParameters.containsKey( Property.Compression_Enabled.getKeyName() )
                     ? Boolean.parseBoolean( initParameters.get( Property.Compression_Enabled.getKeyName() ) )
@@ -166,6 +190,17 @@ public class XodusLocalDB implements LocalDBProvider
         {
             environment.close();
         }
+
+        try
+        {
+            Files.deleteIfExists( getDirtyFile().toPath() );
+            LOGGER.trace( () -> "deleted openLock file" );
+        }
+        catch ( final IOException e )
+        {
+            LOGGER.error( () -> "error creating openLock file: " + e.getMessage() );
+        }
+
         status = LocalDB.Status.CLOSED;
         LOGGER.debug( () -> "closed (" + TimeDuration.compactFromCurrent( startTime ) + ")" );
     }
@@ -176,7 +211,6 @@ public class XodusLocalDB implements LocalDBProvider
         environmentConfig.setEnvCloseForcedly( true );
         environmentConfig.setMemoryUsage( 50 * 1024 * 1024 );
         environmentConfig.setEnvGatherStatistics( true );
-        environmentConfig.setGcUtilizationFromScratch( true );
 
         for ( final Map.Entry<String, String> entry : initParameters.entrySet() )
         {
@@ -188,9 +222,9 @@ public class XodusLocalDB implements LocalDBProvider
                 environmentConfig.setSettings( singleMap );
                 LOGGER.trace( () -> "set env setting from appProperty: " + key + "=" + value );
             }
-            catch ( InvalidSettingException e )
+            catch ( final InvalidSettingException e )
             {
-                LOGGER.warn( "problem setting configured env settings: " + e.getMessage() );
+                LOGGER.warn( () -> "problem setting configured env settings: " + e.getMessage() );
             }
         }
 
@@ -232,18 +266,18 @@ public class XodusLocalDB implements LocalDBProvider
     }
 
     @Override
-    public LocalDB.LocalDBIterator<String> iterator( final LocalDB.DB db )  throws LocalDBException
+    public LocalDB.LocalDBIterator<Map.Entry<String, String>> iterator( final LocalDB.DB db )  throws LocalDBException
     {
         return new InnerIterator( db );
     }
 
-    private class InnerIterator implements LocalDB.LocalDBIterator<String>
+    public class InnerIterator implements LocalDB.LocalDBIterator<Map.Entry<String, String>>
     {
         private final Transaction transaction;
         private final Cursor cursor;
 
         private boolean closed;
-        private String nextValue = "";
+        private Map.Entry<String, String> nextValue = null;
 
         InnerIterator( final LocalDB.DB db )
         {
@@ -258,7 +292,7 @@ public class XodusLocalDB implements LocalDBProvider
             {
                 checkStatus( false );
             }
-            catch ( LocalDBException e )
+            catch ( final LocalDBException e )
             {
                 throw new IllegalStateException( e );
             }
@@ -274,21 +308,24 @@ public class XodusLocalDB implements LocalDBProvider
                     close();
                     return;
                 }
-                final ByteIterable nextKey = cursor.getKey();
-                if ( nextKey == null || nextKey.getLength() == 0 )
+                final ByteIterable nextCursor = cursor.getKey();
+                if ( nextCursor == null || nextCursor.getLength() == 0 )
                 {
                     close();
                     return;
                 }
-                final String decodedValue = bindMachine.entryToKey( nextKey );
-                if ( decodedValue == null )
+                final String decodedKey = bindMachine.entryToKey( nextCursor );
+                if ( decodedKey == null )
                 {
                     close();
                     return;
                 }
-                nextValue = decodedValue;
+                final ByteIterable nextValueIterable = cursor.getValue();
+                final String nextStringValue = nextValueIterable == null ? null : bindMachine.entryToValue( nextValueIterable );
+
+                nextValue = new AbstractMap.SimpleImmutableEntry<>( decodedKey, nextStringValue );
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 e.printStackTrace();
                 throw e;
@@ -315,17 +352,17 @@ public class XodusLocalDB implements LocalDBProvider
         }
 
         @Override
-        public String next( )
+        public Map.Entry<String, String> next( )
         {
             if ( closed )
             {
                 return null;
             }
-            final String value = nextValue;
+            final Map.Entry<String, String> value = nextValue;
             doNext();
             return value;
         }
-
+        
         @Override
         public void remove( )
         {
@@ -500,7 +537,7 @@ public class XodusLocalDB implements LocalDBProvider
                 outputStats.put( "size." + db.name(), this.size( db ) );
             }
         }
-        catch ( LocalDBException e )
+        catch ( final LocalDBException e )
         {
             LOGGER.debug( () -> "error while calculating sizes for localDB debug output: "  + e.getMessage() );
         }
@@ -583,7 +620,7 @@ public class XodusLocalDB implements LocalDBProvider
                 deflaterOutputStream.write( data );
                 deflaterOutputStream.close();
             }
-            catch ( IOException e )
+            catch ( final IOException e )
             {
                 throw new IllegalStateException( "unexpected exception compressing data stream: " + e.getMessage(), e );
             }
@@ -599,7 +636,7 @@ public class XodusLocalDB implements LocalDBProvider
                 inflaterOutputStream.write( data );
                 inflaterOutputStream.close();
             }
-            catch ( IOException e )
+            catch ( final IOException e )
             {
                 throw new IllegalStateException( "unexpected exception decompressing data stream: " + e.getMessage(), e );
             }
@@ -622,9 +659,14 @@ public class XodusLocalDB implements LocalDBProvider
             final byte[] byteContents = contents.getBytes( PwmConstants.DEFAULT_CHARSET );
             Files.write( xodusPath.toPath(), byteContents, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING );
         }
-        catch ( IOException e )
+        catch ( final IOException e )
         {
-            LOGGER.error( "error writing LocalDB readme file: " + e.getMessage() );
+            LOGGER.error( () -> "error writing LocalDB readme file: " + e.getMessage() );
         }
+    }
+
+    private File getDirtyFile()
+    {
+        return new File( this.getFileLocation().getAbsolutePath() + File.separator + FILE_SUB_PATH + File.separator + "xodus.open" );
     }
 }

@@ -31,6 +31,7 @@ import password.pwm.error.PwmUnrecoverableException;
 import password.pwm.health.HealthRecord;
 import password.pwm.http.PwmRequest;
 import password.pwm.svc.PwmService;
+import password.pwm.util.java.ClosableIterator;
 import password.pwm.util.java.FileSystemUtility;
 import password.pwm.util.java.JavaHelper;
 import password.pwm.util.java.MovingAverage;
@@ -129,9 +130,9 @@ public class ResourceServletService implements PwmService
 
             status = STATUS.OPEN;
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error during cache initialization, will remain closed; error: " + e.getMessage() );
+            LOGGER.error( () -> "error during cache initialization, will remain closed; error: " + e.getMessage() );
             status = STATUS.CLOSED;
             return;
         }
@@ -140,9 +141,9 @@ public class ResourceServletService implements PwmService
         {
             resourceNonce = makeResourcePathNonce();
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error during nonce generation, will remain closed; error: " + e.getMessage() );
+            LOGGER.error( () -> "error during nonce generation, will remain closed; error: " + e.getMessage() );
             status = STATUS.CLOSED;
         }
     }
@@ -202,7 +203,7 @@ public class ResourceServletService implements PwmService
 
         if ( !themeName.matches( pwmRequest.getConfig().readAppProperty( AppProperty.SECURITY_INPUT_THEME_MATCH_REGEX ) ) )
         {
-            LOGGER.warn( pwmRequest, "discarding suspicious theme name in request: " + themeName );
+            LOGGER.warn( pwmRequest, () -> "discarding suspicious theme name in request: " + themeName );
             return false;
         }
 
@@ -277,17 +278,23 @@ public class ResourceServletService implements PwmService
                         final File resourcePath = new File( basePath.getAbsolutePath() + File.separator + "public" + File.separator + "resources" );
                         if ( resourcePath.exists() )
                         {
-                            for ( final FileSystemUtility.FileSummaryInformation fileSummaryInformation : FileSystemUtility.readFileInformation( resourcePath ) )
+                            try ( ClosableIterator<FileSystemUtility.FileSummaryInformation> iter =
+                                          FileSystemUtility.readFileInformation( Collections.singletonList( resourcePath ) ) )
                             {
-                                checksumStream.write( JavaHelper.longToBytes( fileSummaryInformation.getChecksum() ) );
+                                while ( iter.hasNext()  )
+                                {
+                                    final FileSystemUtility.FileSummaryInformation fileSummaryInformation = iter.next();
+                                    checksumStream.write( JavaHelper.longToBytes( fileSummaryInformation.getChecksum() ) );
+                                }
+
                             }
                         }
                     }
                 }
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.error( "unable to generate resource path nonce: " + e.getMessage() );
+                LOGGER.error( () -> "unable to generate resource path nonce: " + e.getMessage() );
             }
         }
     }

@@ -20,6 +20,7 @@
 
 package password.pwm.svc.wordlist;
 
+import password.pwm.AppAttribute;
 import password.pwm.PwmApplication;
 import password.pwm.error.PwmError;
 import password.pwm.error.PwmUnrecoverableException;
@@ -53,7 +54,7 @@ class LocalDBWordlistBucket extends AbstractWordlistBucket implements WordlistBu
         {
             localDB.putAll( db, values );
         }
-        catch ( LocalDBException e )
+        catch ( final LocalDBException e )
         {
             throw PwmUnrecoverableException.newException( PwmError.ERROR_LOCALDB_UNAVAILABLE, "error while writing words to wordlist: " + e.getMessage() );
         }
@@ -67,7 +68,7 @@ class LocalDBWordlistBucket extends AbstractWordlistBucket implements WordlistBu
         {
             return pwmApplication.getLocalDB().get( db, key );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             throw PwmUnrecoverableException.newException( PwmError.ERROR_INTERNAL, "error while generating random word: " + e.getMessage() );
         }
@@ -81,7 +82,7 @@ class LocalDBWordlistBucket extends AbstractWordlistBucket implements WordlistBu
         {
             return pwmApplication.getLocalDB().contains( db, key );
         }
-        catch ( LocalDBException e )
+        catch ( final LocalDBException e )
         {
             throw PwmUnrecoverableException.newException( PwmError.ERROR_LOCALDB_UNAVAILABLE, e.getMessage() );
         }
@@ -94,7 +95,7 @@ class LocalDBWordlistBucket extends AbstractWordlistBucket implements WordlistBu
         {
             return localDB.size( db );
         }
-        catch ( LocalDBException e )
+        catch ( final LocalDBException e )
         {
             throw PwmUnrecoverableException.newException( PwmError.ERROR_LOCALDB_UNAVAILABLE, e.getMessage() );
         }
@@ -108,7 +109,7 @@ class LocalDBWordlistBucket extends AbstractWordlistBucket implements WordlistBu
         {
             localDB.truncate( db );
         }
-        catch ( LocalDBException e )
+        catch ( final LocalDBException e )
         {
             throw PwmUnrecoverableException.newException( PwmError.ERROR_LOCALDB_UNAVAILABLE, e.getMessage() );
         }
@@ -117,7 +118,7 @@ class LocalDBWordlistBucket extends AbstractWordlistBucket implements WordlistBu
     @Override
     public WordlistStatus readWordlistStatus()
     {
-        final PwmApplication.AppAttribute appAttribute = wordlistConfiguration.getMetaDataAppAttribute();
+        final AppAttribute appAttribute = wordlistConfiguration.getMetaDataAppAttribute();
         final WordlistStatus storedValue = pwmApplication.readAppAttribute( appAttribute, WordlistStatus.class );
         if ( storedValue != null )
         {
@@ -129,7 +130,7 @@ class LocalDBWordlistBucket extends AbstractWordlistBucket implements WordlistBu
     @Override
     public void writeWordlistStatus( final WordlistStatus wordlistStatus )
     {
-        final PwmApplication.AppAttribute appAttribute = wordlistConfiguration.getMetaDataAppAttribute();
+        final AppAttribute appAttribute = wordlistConfiguration.getMetaDataAppAttribute();
         pwmApplication.writeAppAttribute( appAttribute, wordlistStatus );
     }
 

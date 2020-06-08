@@ -273,9 +273,9 @@ public class PasswordUtility
         try
         {
             final PwmPasswordRuleValidator pwmPasswordRuleValidator = new PwmPasswordRuleValidator( pwmApplication, userInfo.getPasswordPolicy() );
-            pwmPasswordRuleValidator.testPassword( newPassword, null, userInfo, pwmSession.getSessionManager().getActor( pwmApplication ) );
+            pwmPasswordRuleValidator.testPassword( newPassword, null, userInfo, pwmSession.getSessionManager().getActor( ) );
         }
-        catch ( PwmDataValidationException e )
+        catch ( final PwmDataValidationException e )
         {
             final String errorMsg = "attempt to setActorPassword, but password does not pass local policy validator";
             final ErrorInformation errorInformation = new ErrorInformation( e.getErrorInformation().getError(), errorMsg );
@@ -288,7 +288,7 @@ public class PasswordUtility
         boolean setPasswordWithoutOld = false;
         if ( oldPassword == null )
         {
-            if ( pwmSession.getSessionManager().getActor( pwmApplication ).getChaiProvider().getDirectoryVendor() == DirectoryVendor.ACTIVE_DIRECTORY )
+            if ( pwmSession.getSessionManager().getActor( ).getChaiProvider().getDirectoryVendor() == DirectoryVendor.ACTIVE_DIRECTORY )
             {
                 setPasswordWithoutOld = true;
             }
@@ -307,7 +307,7 @@ public class PasswordUtility
 
         final ChaiProvider provider = pwmSession.getSessionManager().getChaiProvider();
 
-        setPassword( pwmApplication, pwmSession.getLabel(), provider, userInfo, setPasswordWithoutOld ? null : oldPassword, newPassword );
+        setPassword( pwmApplication, pwmRequest.getLabel(), provider, userInfo, setPasswordWithoutOld ? null : oldPassword, newPassword );
 
         // update the session state bean's password modified flag
         pwmSession.getSessionStateBean().setPasswordModified( true );
@@ -316,7 +316,7 @@ public class PasswordUtility
         pwmSession.getLoginInfoBean().setUserCurrentPassword( newPassword );
 
         //close any outstanding ldap connections (since they cache the old password)
-        pwmSession.getSessionManager().updateUserPassword( pwmApplication, userInfo.getUserIdentity(), newPassword );
+        pwmSession.getSessionManager().updateUserPassword( userInfo.getUserIdentity(), newPassword );
 
         // clear the "requires new password flag"
         pwmSession.getLoginInfoBean().getLoginFlags().remove( LoginInfoBean.LoginFlag.forcePwChange );
@@ -325,10 +325,10 @@ public class PasswordUtility
         pwmSession.getLoginInfoBean().setType( AuthenticationType.AUTHENTICATED );
 
         // update the uibean's "password expired flag".
-        pwmSession.reloadUserInfoBean( pwmApplication );
+        pwmSession.reloadUserInfoBean( pwmRequest );
 
         // create a proxy user object for pwm to update/read the user.
-        final ChaiUser proxiedUser = pwmSession.getSessionManager().getActor( pwmApplication );
+        final ChaiUser proxiedUser = pwmSession.getSessionManager().getActor();
 
         // update statistics
         {
@@ -337,7 +337,7 @@ public class PasswordUtility
 
         {
             // execute configured actions
-            LOGGER.debug( pwmSession, () -> "executing configured actions to user " + proxiedUser.getEntryDN() );
+            LOGGER.debug( pwmRequest, () -> "executing configured actions to user " + proxiedUser.getEntryDN() );
             final List<ActionConfiguration> configValues = pwmApplication.getConfig().readSettingAsAction( PwmSetting.CHANGE_PASSWORD_WRITE_ATTRIBUTES );
             if ( configValues != null && !configValues.isEmpty() )
             {
@@ -346,7 +346,7 @@ public class PasswordUtility
 
                 final MacroMachine macroMachine = MacroMachine.forUser(
                         pwmApplication,
-                        pwmSession.getLabel(),
+                        pwmRequest.getLabel(),
                         pwmSession.getUserInfo(),
                         clonedLoginInfoBean
                 );
@@ -355,7 +355,7 @@ public class PasswordUtility
                         .setMacroMachine( macroMachine )
                         .setExpandPwmMacros( true )
                         .createActionExecutor();
-                actionExecutor.executeActions( configValues, pwmSession.getLabel() );
+                actionExecutor.executeActions( configValues, pwmRequest.getLabel() );
             }
         }
 
@@ -363,7 +363,7 @@ public class PasswordUtility
         invokePostChangePasswordActions( pwmRequest );
 
         //update the current last password update field in ldap
-        LdapOperationsHelper.updateLastPasswordUpdateAttribute( pwmApplication, pwmSession.getLabel(), userInfo.getUserIdentity() );
+        LdapOperationsHelper.updateLastPasswordUpdateAttribute( pwmApplication, pwmRequest.getLabel(), userInfo.getUserIdentity() );
     }
 
     public static void setPassword(
@@ -403,11 +403,11 @@ public class PasswordUtility
 
             pwmPasswordRuleValidator.testPassword( newPassword, null, userInfo, theUser );
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             throw PwmUnrecoverableException.fromChaiException( e );
         }
-        catch ( PwmException e )
+        catch ( final PwmException e )
         {
             throw new PwmUnrecoverableException( e.getErrorInformation() );
         }
@@ -439,21 +439,21 @@ public class PasswordUtility
                         + AppProperty.LDAP_PASSWORD_CHANGE_SELF_ENABLE.getKey() + "=false" );
             }
         }
-        catch ( ChaiPasswordPolicyException e )
+        catch ( final ChaiPasswordPolicyException e )
         {
             final String errorMsg = "error setting password for user '" + userIdentity.toDisplayString() + "'' " + e.toString();
             final PwmError pwmError = PwmError.forChaiError( e.getErrorCode() );
             final ErrorInformation error = new ErrorInformation( pwmError == null ? PwmError.PASSWORD_UNKNOWN_VALIDATION : pwmError, errorMsg );
             throw new PwmOperationalException( error );
         }
-        catch ( ChaiOperationException e )
+        catch ( final ChaiOperationException e )
         {
             final String errorMsg = "error setting password for user '" + userIdentity.toDisplayString() + "'' " + e.getMessage();
             final PwmError pwmError = PwmError.forChaiError( e.getErrorCode() ) == null ? PwmError.ERROR_INTERNAL : PwmError.forChaiError( e.getErrorCode() );
             final ErrorInformation error = new ErrorInformation( pwmError, errorMsg );
             throw new PwmOperationalException( error );
         }
-        catch ( ChaiUnavailableException e )
+        catch ( final ChaiUnavailableException e )
         {
             throw PwmUnrecoverableException.fromChaiException( e );
         }
@@ -480,7 +480,7 @@ public class PasswordUtility
     }
 
     public static void helpdeskSetUserPassword(
-            final PwmSession pwmSession,
+            final PwmRequest pwmRequest,
             final ChaiUser chaiUser,
             final UserInfo userInfo,
             final PwmApplication pwmApplication,
@@ -488,17 +488,17 @@ public class PasswordUtility
     )
             throws ChaiUnavailableException, PwmUnrecoverableException, PwmOperationalException
     {
-        final SessionLabel sessionLabel = pwmSession.getLabel();
+        final SessionLabel sessionLabel = pwmRequest.getLabel();
         final UserIdentity userIdentity = userInfo.getUserIdentity();
 
-        if ( !pwmSession.isAuthenticated() )
+        if ( !pwmRequest.isAuthenticated() )
         {
             final String errorMsg = "attempt to helpdeskSetUserPassword, but user is not authenticated";
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_UNAUTHORIZED, errorMsg );
             throw new PwmOperationalException( errorInformation );
         }
 
-        final HelpdeskProfile helpdeskProfile = pwmSession.getSessionManager().getHelpdeskProfile( pwmApplication );
+        final HelpdeskProfile helpdeskProfile = pwmRequest.getPwmSession().getSessionManager().getHelpdeskProfile( );
         if ( helpdeskProfile == null )
         {
             final String errorMsg = "attempt to helpdeskSetUserPassword, but user does not have helpdesk permission";
@@ -506,20 +506,20 @@ public class PasswordUtility
             throw new PwmOperationalException( errorInformation );
         }
 
-        setPassword( pwmApplication, pwmSession.getLabel(), chaiUser.getChaiProvider(), userInfo, null, newPassword );
+        setPassword( pwmApplication, pwmRequest.getLabel(), chaiUser.getChaiProvider(), userInfo, null, newPassword );
 
         // create a proxy user object for pwm to update/read the user.
         final ChaiUser proxiedUser = pwmApplication.getProxiedChaiUser( userIdentity );
 
         // mark the event log
         {
-            final HelpdeskAuditRecord auditRecord = new AuditRecordFactory( pwmApplication, pwmSession ).createHelpdeskAuditRecord(
+            final HelpdeskAuditRecord auditRecord = new AuditRecordFactory( pwmApplication, pwmRequest ).createHelpdeskAuditRecord(
                     AuditEvent.HELPDESK_SET_PASSWORD,
-                    pwmSession.getUserInfo().getUserIdentity(),
+                    pwmRequest.getUserInfoIfLoggedIn(),
                     null,
                     userIdentity,
-                    pwmSession.getSessionStateBean().getSrcAddress(),
-                    pwmSession.getSessionStateBean().getSrcHostname()
+                    pwmRequest.getPwmSession().getSessionStateBean().getSrcAddress(),
+                    pwmRequest.getPwmSession().getSessionStateBean().getSrcHostname()
             );
             pwmApplication.getAuditManager().submit( auditRecord );
         }
@@ -551,7 +551,7 @@ public class PasswordUtility
                         .setExpandPwmMacros( true )
                         .createActionExecutor();
 
-                actionExecutor.executeActions( actions, pwmSession.getLabel() );
+                actionExecutor.executeActions( actions, pwmRequest.getLabel() );
             }
         }
 
@@ -562,34 +562,34 @@ public class PasswordUtility
         if ( settingClearResponses == HelpdeskClearResponseMode.yes )
         {
             final String userGUID = LdapOperationsHelper.readLdapGuidValue( pwmApplication, sessionLabel, userIdentity, false );
-            pwmApplication.getCrService().clearResponses( pwmSession.getLabel(), userIdentity, proxiedUser, userGUID );
+            pwmApplication.getCrService().clearResponses( pwmRequest.getLabel(), userIdentity, proxiedUser, userGUID );
 
             // mark the event log
-            final HelpdeskAuditRecord auditRecord = new AuditRecordFactory( pwmApplication, pwmSession ).createHelpdeskAuditRecord(
+            final HelpdeskAuditRecord auditRecord = new AuditRecordFactory( pwmApplication, pwmRequest ).createHelpdeskAuditRecord(
                     AuditEvent.HELPDESK_CLEAR_RESPONSES,
-                    pwmSession.getUserInfo().getUserIdentity(),
+                    pwmRequest.getUserInfoIfLoggedIn(),
                     null,
                     userIdentity,
-                    pwmSession.getSessionStateBean().getSrcAddress(),
-                    pwmSession.getSessionStateBean().getSrcHostname()
+                    pwmRequest.getPwmSession().getSessionStateBean().getSrcAddress(),
+                    pwmRequest.getPwmSession().getSessionStateBean().getSrcHostname()
             );
             pwmApplication.getAuditManager().submit( auditRecord );
         }
 
         // send email notification
-        sendChangePasswordHelpdeskEmailNotice( pwmSession, pwmApplication, userInfo );
+        sendChangePasswordHelpdeskEmailNotice( pwmRequest, pwmApplication, userInfo );
 
         // expire if so configured
         if ( helpdeskProfile.readSettingAsBoolean( PwmSetting.HELPDESK_FORCE_PW_EXPIRATION ) )
         {
-            LOGGER.trace( pwmSession, () -> "preparing to expire password for user " + userIdentity.toDisplayString() );
+            LOGGER.trace( pwmRequest, () -> "preparing to expire password for user " + userIdentity.toDisplayString() );
             try
             {
                 proxiedUser.expirePassword();
             }
-            catch ( ChaiOperationException e )
+            catch ( final ChaiOperationException e )
             {
-                LOGGER.warn( pwmSession, "error while forcing password expiration for user " + userIdentity.toDisplayString() + ", error: " + e.getMessage() );
+                LOGGER.warn( pwmRequest, () -> "error while forcing password expiration for user " + userIdentity.toDisplayString() + ", error: " + e.getMessage() );
             }
         }
 
@@ -608,7 +608,7 @@ public class PasswordUtility
                     userInfo,
                     pwmApplication,
                     newPassword,
-                    pwmSession.getSessionStateBean().getLocale(),
+                    pwmRequest.getLocale(),
                     messageSendMethod
             );
         }
@@ -637,9 +637,9 @@ public class PasswordUtility
                 final Instant lastModifiedDate = determinePwdLastModified( pwmApplication, sessionLabel, userIdentity );
                 returnValue.put( loopReplicaUrl, lastModifiedDate );
             }
-            catch ( ChaiUnavailableException e )
+            catch ( final ChaiUnavailableException e )
             {
-                LOGGER.error( sessionLabel, "unreachable server during replica password sync check" );
+                LOGGER.error( sessionLabel, () -> "unreachable server during replica password sync check" );
                 e.printStackTrace();
             }
             finally
@@ -650,10 +650,10 @@ public class PasswordUtility
                     {
                         loopProvider.close();
                     }
-                    catch ( Exception e )
+                    catch ( final Exception e )
                     {
                         final String errorMsg = "error closing loopProvider to " + loopReplicaUrl + " while checking individual password sync status";
-                        LOGGER.error( sessionLabel, errorMsg );
+                        LOGGER.error( sessionLabel, () -> errorMsg );
                     }
                 }
             }
@@ -704,12 +704,12 @@ public class PasswordUtility
 
                 final ActionExecutor actionExecutor = new ActionExecutor.ActionExecutorSettings( pwmApplication, userIdentity )
                         .setExpandPwmMacros( true )
-                        .setMacroMachine( pwmRequest.getPwmSession().getSessionManager().getMacroMachine( pwmApplication ) )
+                        .setMacroMachine( pwmRequest.getPwmSession().getSessionManager().getMacroMachine( ) )
                         .createActionExecutor();
-                actionExecutor.executeActions( configValues, pwmRequest.getSessionLabel() );
+                actionExecutor.executeActions( configValues, pwmRequest.getLabel() );
             }
         }
-        catch ( PwmException e )
+        catch ( final PwmException e )
         {
             final ErrorInformation info = new ErrorInformation(
                     PwmError.ERROR_SERVICE_UNREACHABLE,
@@ -812,17 +812,21 @@ public class PasswordUtility
             final String password
     )
     {
+        final int maxTestLength = 100;
+
         if ( StringUtil.isEmpty( password ) )
         {
             return Integer.parseInt( configuration.readAppProperty( AppProperty.PASSWORD_STRENGTH_THRESHOLD_VERY_WEAK ) );
         }
 
+        final String testPassword = StringUtil.truncate( password, maxTestLength );
+
         final Zxcvbn zxcvbn = new Zxcvbn();
-        final Strength strength = zxcvbn.measure( password );
+        final Strength strength = zxcvbn.measure( testPassword );
 
         final int zxcvbnScore = strength.getScore();
 
-        // zxcvbn returns a score of 0-4 (see: https://github.com/dropbox/zxcvbn)
+        // zxcvbn returns a score of 0-4 (see: https://github.com/nulab/zxcvbn4j)
         switch ( zxcvbnScore )
         {
             case 4:
@@ -964,9 +968,9 @@ public class PasswordUtility
                     return loopPolicy;
                 }
             }
-            catch ( PwmUnrecoverableException e )
+            catch ( final PwmUnrecoverableException e )
             {
-                LOGGER.error( pwmSession, "unexpected error while testing password policy profile '" + profile + "', error: " + e.getMessage() );
+                LOGGER.error( pwmSession, () -> "unexpected error while testing password policy profile '" + profile + "', error: " + e.getMessage() );
             }
         }
 
@@ -987,7 +991,7 @@ public class PasswordUtility
             {
                 chaiPolicy = theUser.getPasswordPolicy();
             }
-            catch ( ChaiUnavailableException e )
+            catch ( final ChaiUnavailableException e )
             {
                 throw new PwmUnrecoverableException( PwmError.forChaiError( e.getErrorCode() ) );
             }
@@ -1009,9 +1013,9 @@ public class PasswordUtility
                 return PwmPasswordPolicy.createPwmPasswordPolicy( ruleMap, chaiPolicy );
             }
         }
-        catch ( ChaiOperationException e )
+        catch ( final ChaiOperationException e )
         {
-            LOGGER.warn( "error reading password policy for user " + theUser.getEntryDN() + ", error: " + e.getMessage() );
+            LOGGER.warn( () -> "error reading password policy for user " + theUser.getEntryDN() + ", error: " + e.getMessage() );
         }
         return PwmPasswordPolicy.defaultPolicy();
     }
@@ -1093,7 +1097,7 @@ public class PasswordUtility
                     }
                 }
             }
-            catch ( PwmDataValidationException e )
+            catch ( final PwmDataValidationException e )
             {
                 errorCode = e.getError().getErrorCode();
                 userMessage = e.getErrorInformation().toUserStr( locale, pwmApplication.getConfig() );
@@ -1210,19 +1214,19 @@ public class PasswordUtility
     }
 
     private static void sendChangePasswordHelpdeskEmailNotice(
-            final PwmSession pwmSession,
+            final PwmRequest pwmRequest,
             final PwmApplication pwmApplication,
             final UserInfo userInfo
     )
             throws PwmUnrecoverableException
     {
         final Configuration config = pwmApplication.getConfig();
-        final Locale locale = pwmSession.getSessionStateBean().getLocale();
+        final Locale locale = pwmRequest.getLocale();
         final EmailItemBean configuredEmailSetting = config.readSettingAsEmail( PwmSetting.EMAIL_CHANGEPASSWORD_HELPDESK, locale );
 
         if ( configuredEmailSetting == null )
         {
-            LOGGER.debug( pwmSession, () -> "skipping send change password email for '" + pwmSession.getUserInfo().getUserIdentity() + "' no email configured" );
+            LOGGER.debug( pwmRequest, () -> "skipping send change password email for '" + pwmRequest.getUserInfoIfLoggedIn() + "' no email configured" );
             return;
         }
 
@@ -1230,7 +1234,7 @@ public class PasswordUtility
                 ? null
                 : MacroMachine.forUser(
                 pwmApplication,
-                pwmSession.getLabel(),
+                pwmRequest.getLabel(),
                 userInfo,
                 null
         );
@@ -1267,9 +1271,9 @@ public class PasswordUtility
                 return chaiReadDate;
             }
         }
-        catch ( ChaiOperationException e )
+        catch ( final ChaiOperationException e )
         {
-            LOGGER.error( sessionLabel, "unexpected error reading password last modified timestamp: " + e.getMessage() );
+            LOGGER.error( sessionLabel, () -> "unexpected error reading password last modified timestamp: " + e.getMessage() );
         }
 
         final LdapProfile ldapProfile = pwmApplication.getConfig().getLdapProfiles().get( userIdentity.getLdapProfileID() );
@@ -1282,9 +1286,9 @@ public class PasswordUtility
                 LOGGER.trace( sessionLabel, () -> "read pwmPasswordChangeTime as: " + ( pwmPwdLastModified == null ? "n/a" : JavaHelper.toIsoDate( pwmPwdLastModified ) ) );
                 return pwmPwdLastModified;
             }
-            catch ( ChaiOperationException e )
+            catch ( final ChaiOperationException e )
             {
-                LOGGER.error( sessionLabel, "error parsing password last modified PWM password value for user " + theUser.getEntryDN() + "; error: " + e.getMessage() );
+                LOGGER.error( sessionLabel, () -> "error parsing password last modified PWM password value for user " + theUser.getEntryDN() + "; error: " + e.getMessage() );
             }
         }
 
@@ -1363,7 +1367,7 @@ public class PasswordUtility
                 return false;
             }
         }
-        catch ( ChaiException e )
+        catch ( final ChaiException e )
         {
             LOGGER.debug( sessionLabel, () -> "unexpected error reading OracleDS password allow modification time: " + e.getMessage() );
         }

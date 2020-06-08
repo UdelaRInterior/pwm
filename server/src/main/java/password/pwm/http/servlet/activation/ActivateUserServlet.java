@@ -164,7 +164,7 @@ public class ActivateUserServlet extends ControlledPwmServlet
         final ActivateUserBean activateUserBean = activateUserBean( pwmRequest );
         return UserInfoFactory.newUserInfoUsingProxy(
                 pwmRequest.getPwmApplication(),
-                pwmRequest.getSessionLabel(),
+                pwmRequest.getLabel(),
                 activateUserBean.getUserIdentity(),
                 pwmRequest.getLocale() );
 
@@ -266,7 +266,7 @@ public class ActivateUserServlet extends ControlledPwmServlet
                         .ldapProfile( ldapProfile )
                         .build();
 
-                userIdentity = userSearchEngine.performSingleUserSearch( searchConfiguration, pwmRequest.getSessionLabel() );
+                userIdentity = userSearchEngine.performSingleUserSearch( searchConfiguration, pwmRequest.getLabel() );
             }
 
             ActivateUserUtils.validateParamsAgainstLDAP( pwmRequest, formValues, userIdentity );
@@ -275,12 +275,12 @@ public class ActivateUserServlet extends ControlledPwmServlet
             pwmApplication.getIntruderManager().convenience().clearAttributes( formValues );
             pwmApplication.getIntruderManager().convenience().clearAddressAndSession( pwmSession );
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
-            pwmApplication.getIntruderManager().convenience().markAttributes( formValues, pwmRequest.getSessionLabel() );
-            pwmApplication.getIntruderManager().convenience().markAddressAndSession( pwmSession );
+            pwmApplication.getIntruderManager().convenience().markAttributes( formValues, pwmRequest.getLabel() );
+            pwmApplication.getIntruderManager().convenience().markAddressAndSession( pwmRequest );
             setLastError( pwmRequest, e.getErrorInformation() );
-            LOGGER.debug( pwmSession, e.getErrorInformation() );
+            LOGGER.debug( pwmRequest, e.getErrorInformation() );
         }
 
         return ProcessStatus.Continue;
@@ -296,7 +296,7 @@ public class ActivateUserServlet extends ControlledPwmServlet
 
         final List<TokenDestinationItem> tokenDestinationItems = TokenUtil.figureAvailableTokenDestinations(
                 pwmRequest.getPwmApplication(),
-                pwmRequest.getSessionLabel(),
+                pwmRequest.getLabel(),
                 pwmRequest.getLocale(),
                 userInfo,
                 tokenSendMethod
@@ -322,7 +322,6 @@ public class ActivateUserServlet extends ControlledPwmServlet
             throws PwmUnrecoverableException, IOException, ServletException
     {
         final PwmApplication pwmApplication = pwmRequest.getPwmApplication();
-        final PwmSession pwmSession = pwmRequest.getPwmSession();
         final ActivateUserBean activateUserBean = pwmApplication.getSessionStateService().getBean( pwmRequest, ActivateUserBean.class );
         final String userEnteredCode = pwmRequest.readParameterAsString( PwmConstants.PARAM_TOKEN );
 
@@ -351,7 +350,7 @@ public class ActivateUserServlet extends ControlledPwmServlet
                 return ProcessStatus.Halt;
             }
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             LOGGER.debug( pwmRequest, () -> "error while checking entered token: " );
             errorInformation = e.getErrorInformation();
@@ -364,7 +363,7 @@ public class ActivateUserServlet extends ControlledPwmServlet
             {
                 errorInformation = new ErrorInformation( PwmError.ERROR_TOKEN_INCORRECT );
             }
-            LOGGER.debug( pwmSession, errorInformation );
+            LOGGER.debug( pwmRequest, errorInformation );
             setLastError( pwmRequest, errorInformation );
         }
 
@@ -387,7 +386,7 @@ public class ActivateUserServlet extends ControlledPwmServlet
             final AuditRecord auditRecord = new AuditRecordFactory( pwmRequest ).createUserAuditRecord(
                     AuditEvent.AGREEMENT_PASSED,
                     pwmRequest.getUserInfoIfLoggedIn(),
-                    pwmRequest.getSessionLabel(),
+                    pwmRequest.getLabel(),
                     "ActivateUser"
             );
             pwmRequest.getPwmApplication().getAuditManager().submit( auditRecord );
@@ -417,7 +416,7 @@ public class ActivateUserServlet extends ControlledPwmServlet
         {
             final List<TokenDestinationItem> tokenDestinationItems = TokenUtil.figureAvailableTokenDestinations(
                     pwmApplication,
-                    pwmRequest.getSessionLabel(),
+                    pwmRequest.getLabel(),
                     pwmRequest.getLocale(),
                     userInfo,
                     tokenSendMethod
@@ -474,11 +473,11 @@ public class ActivateUserServlet extends ControlledPwmServlet
             ActivateUserUtils.activateUser( pwmRequest, activateUserBean.getUserIdentity() );
             pwmRequest.getPwmResponse().forwardToSuccessPage( Message.Success_ActivateUser );
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
             LOGGER.debug( pwmRequest, e.getErrorInformation() );
-            pwmApplication.getIntruderManager().convenience().markUserIdentity( activateUserBean.getUserIdentity(), pwmSession );
-            pwmApplication.getIntruderManager().convenience().markAddressAndSession( pwmSession );
+            pwmApplication.getIntruderManager().convenience().markUserIdentity( activateUserBean.getUserIdentity(), pwmRequest );
+            pwmApplication.getIntruderManager().convenience().markAddressAndSession( pwmRequest );
             pwmRequest.respondWithError( e.getErrorInformation() );
         }
     }

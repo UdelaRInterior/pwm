@@ -491,9 +491,9 @@ public class PasswordRequirementsTag extends TagSupport
         {
             return Message.getLocalizedMessage( policyValues.getLocale(), effectiveMessage, policyValues.getConfig(), String.valueOf( size ) );
         }
-        catch ( MissingResourceException e )
+        catch ( final MissingResourceException e )
         {
-            LOGGER.error( "unable to display requirement tag for message '" + message.toString() + "': " + e.getMessage() );
+            LOGGER.error( () -> "unable to display requirement tag for message '" + message.toString() + "': " + e.getMessage() );
         }
         return "UNKNOWN MESSAGE STRING";
     }
@@ -504,9 +504,9 @@ public class PasswordRequirementsTag extends TagSupport
         {
             return Message.getLocalizedMessage( policyValues.getLocale(), message, policyValues.getConfig(), field );
         }
-        catch ( MissingResourceException e )
+        catch ( final MissingResourceException e )
         {
-            LOGGER.error( "unable to display requirement tag for message '" + message.toString() + "': " + e.getMessage() );
+            LOGGER.error( () -> "unable to display requirement tag for message '" + message.toString() + "': " + e.getMessage() );
         }
         return "UNKNOWN MESSAGE STRING";
     }
@@ -552,7 +552,7 @@ public class PasswordRequirementsTag extends TagSupport
             final Configuration config = pwmApplication.getConfig();
             final Locale locale = pwmSession.getSessionStateBean().getLocale();
 
-            pwmSession.getSessionManager().getMacroMachine( pwmApplication );
+            pwmSession.getSessionManager().getMacroMachine( );
 
             final PwmPasswordPolicy passwordPolicy;
             if ( getForm() != null && getForm().equalsIgnoreCase( "newuser" ) )
@@ -572,7 +572,7 @@ public class PasswordRequirementsTag extends TagSupport
             }
             else
             {
-                final MacroMachine macroMachine = pwmSession.getSessionManager().getMacroMachine( pwmApplication );
+                final MacroMachine macroMachine = pwmSession.getSessionManager().getMacroMachine( );
 
                 final String pre = prepend != null && prepend.length() > 0 ? prepend : "";
                 final String sep = separator != null && separator.length() > 0 ? separator : "<br/>";
@@ -589,9 +589,9 @@ public class PasswordRequirementsTag extends TagSupport
                 pageContext.getOut().write( requirementsText.toString() );
             }
         }
-        catch ( IOException | PwmException e )
+        catch ( final IOException | PwmException e )
         {
-            LOGGER.error( "unexpected error during password requirements generation: " + e.getMessage(), e );
+            LOGGER.error( () -> "unexpected error during password requirements generation: " + e.getMessage(), e );
             throw new JspTagException( e.getMessage() );
         }
         return EVAL_PAGE;

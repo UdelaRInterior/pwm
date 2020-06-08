@@ -120,9 +120,9 @@ public class LdapDebugDataGenerator
                 returnList.add( ldapDebugInfo );
 
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
-                LOGGER.error( "error during output of ldap profile debug data profile: " + ldapProfile + ", error: " + e.getMessage() );
+                LOGGER.error( () -> "error during output of ldap profile debug data profile: " + ldapProfile + ", error: " + e.getMessage() );
             }
         }
         return returnList;

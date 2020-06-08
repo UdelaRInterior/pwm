@@ -145,7 +145,7 @@ class NewUserUtils
             passwordCheckInfoToException( passwordCheckInfo );
         }
 
-        NewUserUtils.LOGGER.debug( pwmSession, () -> "beginning createUser process for " + newUserDN );
+        NewUserUtils.LOGGER.debug( pwmRequest, () -> "beginning createUser process for " + newUserDN );
 
         final NewUserProfile newUserProfile = NewUserServlet.getNewUserProfile( pwmRequest );
         final boolean promptForPassword = newUserProfile.readSettingAsBoolean( PwmSetting.NEWUSER_PROMPT_FOR_PASSWORD );
@@ -158,7 +158,7 @@ class NewUserUtils
         else
         {
             final PwmPasswordPolicy pwmPasswordPolicy = newUserProfile.getNewUserPasswordPolicy( pwmRequest.getPwmApplication(), pwmRequest.getLocale() );
-            userPassword = RandomPasswordGenerator.createRandomPassword( pwmRequest.getSessionLabel(), pwmPasswordPolicy, pwmRequest.getPwmApplication() );
+            userPassword = RandomPasswordGenerator.createRandomPassword( pwmRequest.getLabel(), pwmPasswordPolicy, pwmRequest.getPwmApplication() );
         }
 
         final Map<String, String> createAttributes = NewUserFormUtils.getLdapDataFromNewUserForm( NewUserServlet.getNewUserProfile( pwmRequest ), newUserForm );
@@ -178,8 +178,9 @@ class NewUserUtils
         {
             // create the ldap entry
             chaiProvider.createEntry( newUserDN, createObjectClasses, createAttributes );
+            NewUserUtils.LOGGER.info( pwmRequest, () -> "created user entry: " + newUserDN );
         }
-        catch ( ChaiOperationException e )
+        catch ( final ChaiOperationException e )
         {
             final String userMessage = "unexpected ldap error creating user entry: " + e.getMessage();
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE,
@@ -203,22 +204,22 @@ class NewUserUtils
 
         if ( useTempPw )
         {
-            NewUserUtils.LOGGER.trace( pwmSession, () -> "will use temporary password process for new user entry: " + newUserDN );
+            NewUserUtils.LOGGER.trace( pwmRequest, () -> "will use temporary password process for new user entry: " + newUserDN );
             final PasswordData temporaryPassword;
             {
                 final RandomPasswordGenerator.RandomGeneratorConfig randomGeneratorConfig = RandomPasswordGenerator.RandomGeneratorConfig.builder()
                         .passwordPolicy( newUserProfile.getNewUserPasswordPolicy( pwmApplication, pwmRequest.getLocale() ) )
                         .build();
-                temporaryPassword = RandomPasswordGenerator.createRandomPassword( pwmSession.getLabel(), randomGeneratorConfig, pwmApplication );
+                temporaryPassword = RandomPasswordGenerator.createRandomPassword( pwmRequest.getLabel(), randomGeneratorConfig, pwmApplication );
             }
             final ChaiUser proxiedUser = chaiProvider.getEntryFactory().newChaiUser( newUserDN );
             try
             {
                 //set password as admin
                 proxiedUser.setPassword( temporaryPassword.getStringValue() );
-                NewUserUtils.LOGGER.debug( pwmSession, () -> "set temporary password for new user entry: " + newUserDN );
+                NewUserUtils.LOGGER.debug( pwmRequest, () -> "set temporary password for new user entry: " + newUserDN );
             }
-            catch ( ChaiOperationException e )
+            catch ( final ChaiOperationException e )
             {
                 final String userMessage = "unexpected ldap error setting temporary password for new user entry: " + e.getMessage();
                 final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE,
@@ -231,11 +232,11 @@ class NewUserUtils
             {
                 try
                 {
-                    NewUserUtils.LOGGER.debug( pwmSession, () ->
+                    NewUserUtils.LOGGER.debug( pwmRequest, () ->
                             "setting userAccountControl attribute to enable account " + theUser.getEntryDN() );
                     theUser.writeStringAttribute( "userAccountControl", "512" );
                 }
-                catch ( ChaiOperationException e )
+                catch ( final ChaiOperationException e )
                 {
                     final String errorMsg = "error enabling AD account when writing userAccountControl attribute: " + e.getMessage();
                     final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE,
@@ -247,7 +248,7 @@ class NewUserUtils
             try
             {
                 // bind as user
-                NewUserUtils.LOGGER.debug( pwmSession, () ->
+                NewUserUtils.LOGGER.debug( pwmRequest, () ->
                         "attempting bind as user to then allow changing to requested password for new user entry: " + newUserDN );
                 final ChaiConfiguration chaiConfiguration = ChaiConfiguration.builder( chaiProvider.getChaiConfiguration() )
                         .setSetting( ChaiSetting.BIND_DN, newUserDN )
@@ -256,10 +257,10 @@ class NewUserUtils
                 final ChaiProvider bindAsProvider = pwmApplication.getLdapConnectionService().getChaiProviderFactory().newProvider( chaiConfiguration );
                 final ChaiUser bindAsUser = bindAsProvider.getEntryFactory().newChaiUser( newUserDN );
                 bindAsUser.changePassword( temporaryPassword.getStringValue(), userPassword.getStringValue() );
-                NewUserUtils.LOGGER.debug( pwmSession, () -> "changed to user requested password for new user entry: " + newUserDN );
+                NewUserUtils.LOGGER.debug( pwmRequest, () -> "changed to user requested password for new user entry: " + newUserDN );
                 bindAsProvider.close();
             }
-            catch ( ChaiOperationException e )
+            catch ( final ChaiOperationException e )
             {
                 final String userMessage = "unexpected ldap error setting user password for new user entry: " + e.getMessage();
                 final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE,
@@ -273,9 +274,9 @@ class NewUserUtils
             {
                 //set password
                 theUser.setPassword( userPassword.getStringValue() );
-                NewUserUtils.LOGGER.debug( pwmSession, () -> "set user requested password for new user entry: " + newUserDN );
+                NewUserUtils.LOGGER.debug( pwmRequest, () -> "set user requested password for new user entry: " + newUserDN );
             }
-            catch ( ChaiOperationException e )
+            catch ( final ChaiOperationException e )
             {
                 final String userMessage = "unexpected ldap error setting password for new user entry: " + e.getMessage();
                 final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE,
@@ -288,12 +289,12 @@ class NewUserUtils
             {
                 try
                 {
-                  NewUserUtils.LOGGER.debug( pwmSession, () ->
-                            "setting userAccountControl attribute to enable account " + theUser.getEntryDN() );
+                  //NewUserUtils.LOGGER.debug( pwmSession, () ->
+                  //          "setting userAccountControl attribute to enable account " + theUser.getEntryDN() );
 
                     theUser.writeStringAttribute( "userAccountControl", "512" );
                 }
-                catch ( ChaiOperationException e )
+                catch ( final ChaiOperationException e )
                 {
                     final String errorMsg = "error enabling AD account when writing userAccountControl attribute: " + e.getMessage();
                     final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE,
@@ -303,14 +304,14 @@ class NewUserUtils
             }
         }
 
-        NewUserUtils.LOGGER.trace( pwmSession, () -> "new user ldap creation process complete, now authenticating user" );
+        NewUserUtils.LOGGER.trace( pwmRequest, () -> "new user ldap creation process complete, now authenticating user" );
 
         // write data to remote web service
         remoteWriteFormData( pwmRequest, newUserForm );
 
         // authenticate the user to pwm
         final UserIdentity userIdentity = new UserIdentity( newUserDN, pwmApplication.getConfig().getDefaultLdapProfile().getIdentifier() );
-        final SessionAuthenticator sessionAuthenticator = new SessionAuthenticator( pwmApplication, pwmSession, PwmAuthenticationSource.NEW_USER_REGISTRATION );
+        final SessionAuthenticator sessionAuthenticator = new SessionAuthenticator( pwmApplication, pwmRequest, PwmAuthenticationSource.NEW_USER_REGISTRATION );
         sessionAuthenticator.authenticateUser( userIdentity, userPassword );
 
         {
@@ -318,7 +319,7 @@ class NewUserUtils
             // execute configured actions
             final ActionExecutor actionExecutor = new ActionExecutor.ActionExecutorSettings( pwmApplication, userIdentity )
                     .setExpandPwmMacros( true )
-                    .setMacroMachine( pwmSession.getSessionManager().getMacroMachine( pwmApplication ) )
+                    .setMacroMachine( pwmSession.getSessionManager().getMacroMachine( ) )
                     .createActionExecutor();
 
             // add common groups
@@ -329,7 +330,7 @@ class NewUserUtils
             // add groups to email
             if ( actions != null && !actions.isEmpty() )
             {
-                NewUserUtils.LOGGER.debug( pwmSession, () -> "executing configured actions to user " + theUser.getEntryDN() );
+                NewUserUtils.LOGGER.debug( pwmRequest, () -> "executing configured actions to user " + theUser.getEntryDN() );
                 actionExecutor.executeActions( actions, pwmSession.getLabel() );
             }
             // reset actions to null
@@ -352,7 +353,7 @@ class NewUserUtils
         // increment the new user creation statistics
         pwmApplication.getStatisticsManager().incrementValue( Statistic.NEW_USERS );
 
-        NewUserUtils.LOGGER.debug( pwmSession, () -> "completed createUser process for " + newUserDN + " (" + TimeDuration.fromCurrent(
+        NewUserUtils.LOGGER.debug( pwmRequest, () -> "completed createUser process for " + newUserDN + " (" + TimeDuration.fromCurrent(
                 startTime ).asCompactString() + ")" );
     }
 
@@ -364,13 +365,13 @@ class NewUserUtils
     {
         try
         {
-            NewUserUtils.LOGGER.warn( pwmRequest, "deleting ldap user account " + userDN );
+            NewUserUtils.LOGGER.warn( pwmRequest, () -> "deleting ldap user account " + userDN );
             pwmRequest.getConfig().getDefaultLdapProfile().getProxyChaiProvider( pwmRequest.getPwmApplication() ).deleteEntry( userDN );
-            NewUserUtils.LOGGER.warn( pwmRequest, "ldap user account " + userDN + " has been deleted" );
+            NewUserUtils.LOGGER.warn( pwmRequest, () -> "ldap user account " + userDN + " has been deleted" );
         }
-        catch ( ChaiUnavailableException | ChaiOperationException e )
+        catch ( final ChaiUnavailableException | ChaiOperationException e )
         {
-            NewUserUtils.LOGGER.error( pwmRequest, "error deleting ldap user account " + userDN + ", " + e.getMessage() );
+            NewUserUtils.LOGGER.error( pwmRequest, () -> "error deleting ldap user account " + userDN + ", " + e.getMessage() );
         }
 
         pwmRequest.getPwmSession().unauthenticateUser( pwmRequest );
@@ -382,7 +383,7 @@ class NewUserUtils
     )
             throws PwmUnrecoverableException, ChaiUnavailableException
     {
-        final MacroMachine macroMachine = createMacroMachineForNewUser( pwmRequest.getPwmApplication(), pwmRequest.getSessionLabel(), formValues, null );
+        final MacroMachine macroMachine = createMacroMachineForNewUser( pwmRequest.getPwmApplication(), pwmRequest.getLabel(), formValues, null );
         final NewUserProfile newUserProfile = NewUserServlet.getNewUserProfile( pwmRequest );
         final List<String> configuredNames = newUserProfile.readSettingAsStringArray( PwmSetting.NEWUSER_USERNAME_DEFINITION );
         final List<String> failedValues = new ArrayList<>();
@@ -442,8 +443,10 @@ class NewUserUtils
             NewUserUtils.LOGGER.debug( pwmRequest, () -> "generated entry name for new user is not unique, will try again" );
             attemptCount++;
         }
+
+        final int attemptCountFinal = attemptCount;
         NewUserUtils.LOGGER.error( pwmRequest,
-                "failed to generate new user DN after " + attemptCount + " attempts, failed values: " + JsonUtil.serializeCollection(
+                () -> "failed to generate new user DN after " + attemptCountFinal + " attempts, failed values: " + JsonUtil.serializeCollection(
                         failedValues ) );
         throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE,
                 "unable to generate a unique DN value" ) );
@@ -463,13 +466,13 @@ class NewUserUtils
         try
         {
             final Map<UserIdentity, Map<String, String>> results = userSearchEngine.performMultiUserSearch(
-                    searchConfiguration, 2, Collections.emptyList(), pwmRequest.getSessionLabel() );
+                    searchConfiguration, 2, Collections.emptyList(), pwmRequest.getLabel() );
             return results != null && !results.isEmpty();
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
             final String msg = "ldap error while searching for duplicate entry names: " + e.getMessage();
-            NewUserUtils.LOGGER.error( pwmRequest, msg );
+            NewUserUtils.LOGGER.error( pwmRequest, () -> msg );
             throw new PwmUnrecoverableException( new ErrorInformation( PwmError.ERROR_NEW_USER_FAILURE, msg ) );
         }
     }
@@ -487,7 +490,7 @@ class NewUserUtils
 
         if ( configuredEmailSetting == null )
         {
-            NewUserUtils.LOGGER.debug( pwmSession, () ->
+            NewUserUtils.LOGGER.debug( pwmRequest, () ->
                     "skipping send of new user email for '" + userInfo.getUserIdentity().getUserDN() + "' no email configured" );
             return;
         }
@@ -495,7 +498,7 @@ class NewUserUtils
         pwmRequest.getPwmApplication().getEmailQueue().submitEmail(
                 configuredEmailSetting,
                 pwmSession.getUserInfo(),
-                pwmSession.getSessionManager().getMacroMachine( pwmRequest.getPwmApplication() )
+                pwmSession.getSessionManager().getMacroMachine( )
         );
     }
 
@@ -580,7 +583,7 @@ class NewUserUtils
     )
             throws PwmUnrecoverableException, PwmDataValidationException
     {
-        final RestFormDataClient restFormDataClient = new RestFormDataClient( pwmRequest.getPwmApplication(), pwmRequest.getSessionLabel() );
+        final RestFormDataClient restFormDataClient = new RestFormDataClient( pwmRequest.getPwmApplication(), pwmRequest.getLabel() );
         if ( !restFormDataClient.isEnabled() )
         {
             return;
@@ -706,7 +709,7 @@ class NewUserUtils
                     final Map<String, String> tokenPayloadMap = NewUserFormUtils.toTokenPayload( pwmRequest, newUserBean );
                     final MacroMachine macroMachine = createMacroMachineForNewUser(
                             pwmRequest.getPwmApplication(),
-                            pwmRequest.getSessionLabel(),
+                            pwmRequest.getLabel(),
                             newUserBean.getNewUserForm(),
                             tokenDestinationItem );
 

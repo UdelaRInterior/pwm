@@ -107,7 +107,7 @@ public class Validator
                     throw new PwmOperationalException( PwmError.ERROR_INCORRECT_REQ_SEQUENCE, debugMsg );
                 }
             }
-            catch ( StringIndexOutOfBoundsException | NumberFormatException e )
+            catch ( final StringIndexOutOfBoundsException | NumberFormatException e )
             {
                 throw new PwmOperationalException( PwmError.ERROR_INCORRECT_REQ_SEQUENCE );
             }
@@ -142,7 +142,8 @@ public class Validator
                 final String newString = theString.replaceAll( testString, "" );
                 if ( !newString.equals( theString ) )
                 {
-                    LOGGER.warn( "removing potentially malicious string values from input, converting '" + input + "' newValue=" + newString + "' pattern='" + testString + "'" );
+                    LOGGER.warn( () -> "removing potentially malicious string values from input, converting '"
+                            + input + "' newValue=" + newString + "' pattern='" + testString + "'" );
                     theString = newString;
                 }
             }
@@ -167,7 +168,7 @@ public class Validator
             final String output = matcher.replaceAll( "" );
             if ( !input.equals( output ) )
             {
-                LOGGER.warn( "stripped potentially harmful chars from value: input=" + input + " strippedOutput=" + output );
+                LOGGER.warn( () -> "stripped potentially harmful chars from value: input=" + input + " strippedOutput=" + output );
             }
             return output;
         }

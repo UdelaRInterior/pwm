@@ -49,10 +49,10 @@ public class UserAgentUtils
         {
             return new UserAgentService().loadParser();
         }
-        catch ( IOException | ParseException e )
+        catch ( final IOException | ParseException e )
         {
             final String msg = "error loading user-agent parser: " + e.getMessage();
-            LOGGER.error( msg, e );
+            LOGGER.error( () -> msg, e );
         }
 
         return null;
@@ -90,9 +90,9 @@ public class UserAgentUtils
                     badBrowser = true;
                 }
             }
-            catch ( NumberFormatException e )
+            catch ( final NumberFormatException e )
             {
-                LOGGER.error( "error parsing user-agent major version" + e.getMessage(), e );
+                LOGGER.error( () -> "error parsing user-agent major version" + e.getMessage(), e );
             }
         }
 

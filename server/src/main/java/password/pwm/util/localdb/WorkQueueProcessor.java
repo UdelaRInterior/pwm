@@ -60,7 +60,7 @@ import java.util.concurrent.locks.LockSupport;
 public final class WorkQueueProcessor<W extends Serializable>
 {
     private static final TimeDuration SUBMIT_QUEUE_FULL_RETRY_CYCLE_INTERVAL = TimeDuration.of( 100, TimeDuration.Unit.MILLISECONDS );
-    private static final TimeDuration CLOSE_RETRY_CYCLE_INTERVAL = TimeDuration.of( 100, TimeDuration.Unit.MILLISECONDS );
+    private static final TimeDuration CLOSE_RETRY_CYCLE_INTERVAL = TimeDuration.of( 5, TimeDuration.Unit.MILLISECONDS );
 
     private final Deque<String> queue;
     private final Settings settings;
@@ -159,7 +159,7 @@ public final class WorkQueueProcessor<W extends Serializable>
         final String msg = "shutting down with " + queue.size() + " items remaining in work queue (" + timeDuration.asCompactString() + ")";
         if ( !queue.isEmpty() )
         {
-            logger.warn( msg );
+            logger.warn( () -> msg );
         }
         else
         {
@@ -191,7 +191,7 @@ public final class WorkQueueProcessor<W extends Serializable>
                 executorService.execute( ( ) -> sendAndQueueIfNecessary( itemWrapper ) );
                 preQueueSubmit.incrementAndGet();
             }
-            catch ( RejectedExecutionException e )
+            catch ( final RejectedExecutionException e )
             {
                 submitToQueue( itemWrapper );
                 preQueueBypass.incrementAndGet();
@@ -219,15 +219,15 @@ public final class WorkQueueProcessor<W extends Serializable>
                 {
                     submitToQueue( itemWrapper );
                 }
-                catch ( Exception e )
+                catch ( final Exception e )
                 {
-                    logger.error( "error submitting to work queue after executor returned retry status: " + e.getMessage() );
+                    logger.error( () -> "error submitting to work queue after executor returned retry status: " + e.getMessage() );
                 }
             }
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
-            logger.error( "unexpected error while processing itemWrapper: " + e.getMessage(), e );
+            logger.error( () -> "unexpected error while processing itemWrapper: " + e.getMessage(), e );
         }
     }
 
@@ -281,7 +281,7 @@ public final class WorkQueueProcessor<W extends Serializable>
         {
             itemMsg = itemWrapper.toDebugString( itemProcessor );
         }
-        catch ( PwmOperationalException e )
+        catch ( final PwmOperationalException e )
         {
             itemMsg = "error";
         }
@@ -315,9 +315,9 @@ public final class WorkQueueProcessor<W extends Serializable>
                     waitForWork();
                 }
             }
-            catch ( Throwable t )
+            catch ( final Throwable t )
             {
-                logger.error( "unexpected error processing work item queue: " + JavaHelper.readHostileExceptionMessage( t ), t );
+                logger.error( () -> "unexpected error processing work item queue: " + JavaHelper.readHostileExceptionMessage( t ), t );
             }
 
             logger.trace( () -> "worker thread beginning shutdown..." );
@@ -334,9 +334,9 @@ public final class WorkQueueProcessor<W extends Serializable>
                         processNextItem();
                     }
                 }
-                catch ( Throwable t )
+                catch ( final Throwable t )
                 {
-                    logger.error( "unexpected error processing work item queue: " + JavaHelper.readHostileExceptionMessage( t ), t );
+                    logger.error( () -> "unexpected error processing work item queue: " + JavaHelper.readHostileExceptionMessage( t ), t );
                 }
             }
 
@@ -350,10 +350,15 @@ public final class WorkQueueProcessor<W extends Serializable>
             logger.trace( () -> "shutdown flag set" );
             notifyWorkPending();
 
-            // rest until not running for up to 3 seconds....
+            // rest until not running for up to 10 seconds....
             if ( running.get() )
             {
-                TimeDuration.of( 3, TimeDuration.Unit.SECONDS ).pause( TimeDuration.of( 10, TimeDuration.Unit.MILLISECONDS ), () -> !running.get() );
+                logger.trace( () -> "running = " + running.get() );
+                final TimeDuration maxWaitTime = TimeDuration.of( 10, TimeDuration.Unit.SECONDS );
+                final Instant startTime = Instant.now();
+                maxWaitTime.of( 10, TimeDuration.Unit.SECONDS ).pause( CLOSE_RETRY_CYCLE_INTERVAL, () -> !running.get() );
+                final TimeDuration waitTime = TimeDuration.fromCurrent( startTime );
+                logger.trace( () -> "waited " + waitTime.asCompactString() + " workQueueSize=" + queue.size() + " running=" + running.get() );
             }
         }
 
@@ -408,14 +413,14 @@ public final class WorkQueueProcessor<W extends Serializable>
                 if ( TimeDuration.fromCurrent( itemWrapper.getDate() ).isLongerThan( settings.getRetryDiscardAge() ) )
                 {
                     removeQueueTop();
-                    logger.warn( "discarding queued item due to age, item=" + makeDebugText( itemWrapper ) );
+                    logger.warn( () -> "discarding queued item due to age, item=" + makeDebugText( itemWrapper ) );
                     return;
                 }
             }
-            catch ( Throwable e )
+            catch ( final Throwable e )
             {
                 removeQueueTop();
-                logger.warn( "discarding stored record due to parsing error: " + e.getMessage() + ", record=" + nextStrValue );
+                logger.warn( () -> "discarding stored record due to parsing error: " + e.getMessage() + ", record=" + nextStrValue );
                 return;
             }
 
@@ -427,7 +432,7 @@ public final class WorkQueueProcessor<W extends Serializable>
                 if ( processResult == null )
                 {
                     removeQueueTop();
-                    logger.warn( "itemProcessor.process() returned null, removing; item=" + makeDebugText( itemWrapper ) );
+                    logger.warn( () -> "itemProcessor.process() returned null, removing; item=" + makeDebugText( itemWrapper ) );
                 }
                 else
                 {
@@ -436,7 +441,7 @@ public final class WorkQueueProcessor<W extends Serializable>
                         case FAILED:
                         {
                             removeQueueTop();
-                            logger.error( "discarding item after process failure, item=" + makeDebugText( itemWrapper ) );
+                            logger.error( () -> "discarding item after process failure, item=" + makeDebugText( itemWrapper ) );
                         }
                         break;
 
@@ -463,12 +468,12 @@ public final class WorkQueueProcessor<W extends Serializable>
                     }
                 }
             }
-            catch ( Throwable e )
+            catch ( final Throwable e )
             {
                 if ( !shutdownFlag.get() )
                 {
                     removeQueueTop();
-                    logger.error( "unexpected error while processing work queue: " + e.getMessage() );
+                    logger.error( () -> "unexpected error while processing work queue: " + e.getMessage() );
                 }
             }
 
@@ -516,7 +521,7 @@ public final class WorkQueueProcessor<W extends Serializable>
                 final Object o = JsonUtil.deserialize( item, clazz );
                 return ( W ) o;
             }
-            catch ( Exception e )
+            catch ( final Exception e )
             {
                 throw new PwmOperationalException( new ErrorInformation( PwmError.ERROR_INTERNAL, "unexpected error deserializing work queue item: " + e.getMessage() ) );
             }

@@ -79,11 +79,11 @@ class DatabaseNodeDataService implements NodeDataServiceProvider
     {
         final Map<String, StoredNodeData> returnList = new LinkedHashMap<>();
         final DatabaseAccessor databaseAccessor = getDatabaseAccessor();
-        try ( ClosableIterator<String> tableIterator = databaseAccessor.iterator( TABLE ) )
+        try ( ClosableIterator<Map.Entry<String, String>> tableIterator = databaseAccessor.iterator( TABLE ) )
         {
             while ( tableIterator.hasNext() )
             {
-                final String dbKey = tableIterator.next();
+                final String dbKey = tableIterator.next().getKey();
                 if ( dbKey.startsWith( KEY_PREFIX_NODE ) )
                 {
                     final String rawValueInDb = databaseAccessor.get( TABLE, dbKey );
@@ -92,7 +92,7 @@ class DatabaseNodeDataService implements NodeDataServiceProvider
                 }
             }
         }
-        catch ( DatabaseException e )
+        catch ( final DatabaseException e )
         {
             throw new PwmUnrecoverableException( PwmError.ERROR_DB_UNAVAILABLE, "unexpected database error reading cluster node status: " + e.getMessage() );
         }
@@ -109,7 +109,7 @@ class DatabaseNodeDataService implements NodeDataServiceProvider
             final String value = JsonUtil.serialize( storedNodeData );
             databaseAccessor.put( TABLE, key, value );
         }
-        catch ( DatabaseException e )
+        catch ( final DatabaseException e )
         {
             throw new PwmUnrecoverableException( PwmError.ERROR_DB_UNAVAILABLE, "unexpected database error writing cluster node status: " + e.getMessage() );
         }
@@ -141,7 +141,7 @@ class DatabaseNodeDataService implements NodeDataServiceProvider
                 }
             }
         }
-        catch ( DatabaseException e )
+        catch ( final DatabaseException e )
         {
             throw new PwmUnrecoverableException( PwmError.ERROR_DB_UNAVAILABLE, "unexpected database error writing cluster node status: " + e.getMessage() );
         }

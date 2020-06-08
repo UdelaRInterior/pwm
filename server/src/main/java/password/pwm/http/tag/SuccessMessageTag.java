@@ -54,7 +54,7 @@ public class SuccessMessageTag extends PwmAbstractTag
             {
                 if ( pwmRequest.isAuthenticated() )
                 {
-                    final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( pwmRequest.getPwmApplication() );
+                    final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( );
                     outputMsg = macroMachine.expandMacros( successMsg );
                 }
                 else
@@ -65,7 +65,7 @@ public class SuccessMessageTag extends PwmAbstractTag
 
             pageContext.getOut().write( outputMsg );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             throw new JspTagException( e.getMessage() );
         }

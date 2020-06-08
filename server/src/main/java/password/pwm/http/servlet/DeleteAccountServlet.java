@@ -96,7 +96,7 @@ public class DeleteAccountServlet extends ControlledPwmServlet
 
     private DeleteAccountProfile getProfile( final PwmRequest pwmRequest ) throws PwmUnrecoverableException
     {
-        return pwmRequest.getPwmSession().getSessionManager().getSelfDeleteProfile( pwmRequest.getPwmApplication() );
+        return pwmRequest.getPwmSession().getSessionManager().getSelfDeleteProfile( );
     }
 
     private DeleteAccountBean getBean( final PwmRequest pwmRequest ) throws PwmUnrecoverableException
@@ -143,7 +143,7 @@ public class DeleteAccountServlet extends ControlledPwmServlet
         {
             if ( !bean.isAgreementPassed() )
             {
-                final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( pwmRequest.getPwmApplication() );
+                final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( );
                 final String expandedText = macroMachine.expandMacros( selfDeleteAgreementText );
                 pwmRequest.setAttribute( PwmRequestAttribute.AgreementText, expandedText );
                 pwmRequest.forwardToJsp( JspUrl.SELF_DELETE_AGREE );
@@ -180,7 +180,7 @@ public class DeleteAccountServlet extends ControlledPwmServlet
             final AuditRecord auditRecord = new AuditRecordFactory( pwmRequest ).createUserAuditRecord(
                     AuditEvent.AGREEMENT_PASSED,
                     pwmRequest.getUserInfoIfLoggedIn(),
-                    pwmRequest.getSessionLabel(),
+                    pwmRequest.getLabel(),
                     ProfileDefinition.DeleteAccount.toString()
             );
             pwmRequest.getPwmApplication().getAuditManager().submit( auditRecord );
@@ -210,16 +210,16 @@ public class DeleteAccountServlet extends ControlledPwmServlet
 
                 final ActionExecutor actionExecutor = new ActionExecutor.ActionExecutorSettings( pwmApplication, userIdentity )
                         .setExpandPwmMacros( true )
-                        .setMacroMachine( pwmRequest.getPwmSession().getSessionManager().getMacroMachine( pwmApplication ) )
+                        .setMacroMachine( pwmRequest.getPwmSession().getSessionManager().getMacroMachine( ) )
                         .createActionExecutor();
 
                 try
                 {
-                    actionExecutor.executeActions( actions, pwmRequest.getSessionLabel() );
+                    actionExecutor.executeActions( actions, pwmRequest.getLabel() );
                 }
-                catch ( PwmOperationalException e )
+                catch ( final PwmOperationalException e )
                 {
-                    LOGGER.error( "error during user delete action execution: " + e.getMessage() );
+                    LOGGER.error( () -> "error during user delete action execution: " + e.getMessage() );
                     throw new PwmUnrecoverableException( e.getErrorInformation(), e.getCause() );
                 }
             }
@@ -234,7 +234,7 @@ public class DeleteAccountServlet extends ControlledPwmServlet
         final String nextUrl = deleteAccountProfile.readSettingAsString( PwmSetting.DELETE_ACCOUNT_NEXT_URL );
         if ( nextUrl != null && !nextUrl.isEmpty() )
         {
-            final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( pwmApplication );
+            final MacroMachine macroMachine = pwmRequest.getPwmSession().getSessionManager().getMacroMachine( );
             final String macroedUrl = macroMachine.expandMacros( nextUrl );
             LOGGER.debug( pwmRequest, () -> "setting forward url to post-delete next url: " + macroedUrl );
             pwmRequest.getPwmSession().getSessionStateBean().setForwardURL( macroedUrl );
@@ -248,10 +248,10 @@ public class DeleteAccountServlet extends ControlledPwmServlet
             {
                 chaiUser.getChaiProvider().deleteEntry( chaiUser.getEntryDN() );
             }
-            catch ( ChaiException e )
+            catch ( final ChaiException e )
             {
                 final PwmUnrecoverableException pwmException = PwmUnrecoverableException.fromChaiException( e );
-                LOGGER.error( "error during user delete", pwmException );
+                LOGGER.error( () -> "error during user delete", pwmException );
                 throw pwmException;
             }
         }
@@ -283,7 +283,7 @@ public class DeleteAccountServlet extends ControlledPwmServlet
         pwmRequest.getPwmApplication().getEmailQueue().submitEmail(
                 configuredEmailSetting,
                 pwmRequest.getPwmSession().getUserInfo(),
-                pwmRequest.getPwmSession().getSessionManager().getMacroMachine( pwmRequest.getPwmApplication() )
+                pwmRequest.getPwmSession().getSessionManager().getMacroMachine( )
         );
     }
 }

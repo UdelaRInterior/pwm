@@ -21,7 +21,7 @@
 package password.pwm.util.localdb;
 
 import password.pwm.AppProperty;
-import password.pwm.PwmApplication;
+import password.pwm.PwmEnvironment;
 import password.pwm.config.Configuration;
 import password.pwm.error.ErrorInformation;
 import password.pwm.error.PwmError;
@@ -46,13 +46,13 @@ public class LocalDBFactory
     public static synchronized LocalDB getInstance(
             final File dbDirectory,
             final boolean readonly,
-            final PwmApplication pwmApplication,
+            final PwmEnvironment pwmEnvironment,
             final Configuration configuration
     )
             throws Exception
     {
-        final Configuration config = ( configuration == null && pwmApplication != null )
-                ? pwmApplication.getConfig()
+        final Configuration config = ( configuration == null && pwmEnvironment != null )
+                ? pwmEnvironment.getConfig()
                 : configuration;
 
         final long startTime = System.currentTimeMillis();
@@ -72,13 +72,13 @@ public class LocalDBFactory
             initParameters = StringUtil.convertStringListToNameValuePair( Arrays.asList( initStrings.split( ";;;" ) ), "=" );
         }
 
-        final Map<LocalDBProvider.Parameter, String> parameters = pwmApplication == null
+        final Map<LocalDBProvider.Parameter, String> parameters = pwmEnvironment == null
                 ? Collections.emptyMap()
-                : makeParameterMap( pwmApplication.getConfig(), readonly );
+                : makeParameterMap( pwmEnvironment.getConfig(), readonly );
         final LocalDBProvider dbProvider = createInstance( className );
         LOGGER.debug( () -> "initializing " + className + " localDBProvider instance" );
 
-        final LocalDB localDB = new LocalDBAdaptor( dbProvider, pwmApplication );
+        final LocalDB localDB = new LocalDBAdaptor( dbProvider );
 
         initInstance( dbProvider, dbDirectory, initParameters, className, parameters );
         final TimeDuration openTime = TimeDuration.of( System.currentTimeMillis() - startTime, TimeDuration.Unit.MILLISECONDS );
@@ -91,7 +91,7 @@ public class LocalDBFactory
             final LocalDBUtility localDBUtility = new LocalDBUtility( localDB );
             if ( localDBUtility.readImportInprogressFlag() )
             {
-                LOGGER.error( "previous database import process did not complete successfully, clearing all data" );
+                LOGGER.error( () -> "previous database import process did not complete successfully, clearing all data" );
                 localDBUtility.cancelImportProcess();
             }
         }
@@ -127,10 +127,10 @@ public class LocalDBFactory
             }
             localDB = ( LocalDBProvider ) impl;
         }
-        catch ( Throwable e )
+        catch ( final Throwable e )
         {
             final String errorMsg = "error creating new LocalDB instance: " + e.getClass().getName() + ":" + e.getMessage();
-            LOGGER.error( errorMsg, e );
+            LOGGER.error( () -> errorMsg, e );
             throw new LocalDBException( new ErrorInformation( PwmError.ERROR_LOCALDB_UNAVAILABLE, errorMsg ) );
         }
 
@@ -156,10 +156,10 @@ public class LocalDBFactory
 
             pwmDBProvider.init( dbFileLocation, initParameters, parameters );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
             final String errorMsg = "error creating new LocalDB instance: " + e.getClass().getName() + ":" + e.getMessage();
-            LOGGER.error( errorMsg, e );
+            LOGGER.error( () -> errorMsg, e );
             throw new LocalDBException( new ErrorInformation( PwmError.ERROR_LOCALDB_UNAVAILABLE, errorMsg ) );
         }
 

@@ -94,7 +94,7 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet
         {
             return ConfigManagerAction.valueOf( request.readParameterAsString( PwmConstants.PARAM_ACTION_REQUEST ) );
         }
-        catch ( IllegalArgumentException e )
+        catch ( final IllegalArgumentException e )
         {
             return null;
         }
@@ -144,7 +144,7 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, "unknown wordlist type: " + wordlistTypeParam );
             pwmRequest.outputJsonResult( RestResultBean.fromError( errorInformation, pwmRequest ) );
-            LOGGER.error( pwmRequest, "error during import: " + errorInformation.toDebugStr() );
+            LOGGER.error( pwmRequest, () -> "error during import: " + errorInformation.toDebugStr() );
             return;
         }
 
@@ -152,7 +152,7 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, "no file found in upload" );
             pwmRequest.outputJsonResult( RestResultBean.fromError( errorInformation, pwmRequest ) );
-            LOGGER.error( pwmRequest, "error during import: " + errorInformation.toDebugStr() );
+            LOGGER.error( pwmRequest, () -> "error during import: " + errorInformation.toDebugStr() );
             return;
         }
 
@@ -162,7 +162,7 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet
         {
             wordlistType.forType( pwmApplication ).populate( inputStream );
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             final ErrorInformation errorInfo = new ErrorInformation( PwmError.ERROR_INTERNAL, e.getMessage() );
             final RestResultBean restResultBean = RestResultBean.fromError( errorInfo, pwmRequest );
@@ -184,7 +184,7 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet
         {
             final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_INTERNAL, "unknown wordlist type: " + wordlistTypeParam );
             pwmRequest.outputJsonResult( RestResultBean.fromError( errorInformation, pwmRequest ) );
-            LOGGER.error( pwmRequest, "error during clear: " + errorInformation.toDebugStr() );
+            LOGGER.error( pwmRequest, () -> "error during clear: " + errorInformation.toDebugStr() );
             return;
         }
 
@@ -192,9 +192,9 @@ public class ConfigManagerWordlistServlet extends AbstractPwmServlet
         {
             wordlistType.forType( pwmRequest.getPwmApplication() ).clear();
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error clearing wordlist " + wordlistType + ", error: " + e.getMessage() );
+            LOGGER.error( () -> "error clearing wordlist " + wordlistType + ", error: " + e.getMessage() );
         }
 
         pwmRequest.outputJsonResult( RestResultBean.forSuccessMessage( pwmRequest, Message.Success_Unknown ) );

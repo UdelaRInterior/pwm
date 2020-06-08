@@ -159,7 +159,7 @@ public class PwmHttpResponseWrapper
     {
         if ( this.getHttpServletResponse().isCommitted() )
         {
-            LOGGER.warn( "attempt to write cookie '" + cookieName + "' after response is committed" );
+            LOGGER.warn( () -> "attempt to write cookie '" + cookieName + "' after response is committed" );
         }
 
         final boolean secureFlag;
@@ -207,7 +207,7 @@ public class PwmHttpResponseWrapper
         theCookie.setPath( path == null ? CookiePath.CurrentURL.toStringPath( httpServletRequest ) : path.toStringPath( httpServletRequest ) );
         if ( value != null && value.length() > 2000 )
         {
-            LOGGER.warn( "writing large cookie to response: cookieName=" + cookieName + ", length=" + value.length() );
+            LOGGER.warn( () -> "writing large cookie to response: cookieName=" + cookieName + ", length=" + value.length() );
         }
         this.getHttpServletResponse().addCookie( theCookie );
         addSameSiteCookieAttribute();
@@ -222,7 +222,7 @@ public class PwmHttpResponseWrapper
             final String value = pwmApplication.getConfig().readAppProperty( AppProperty.HTTP_COOKIE_SAMESITE_VALUE );
             CookieManagementFilter.addSameSiteCookieAttribute( httpServletResponse, value );
         }
-        catch ( PwmUnrecoverableException e )
+        catch ( final PwmUnrecoverableException e )
         {
             LOGGER.trace( () -> "unable to load application configuration while checking samesite cookie attribute config", e );
         }

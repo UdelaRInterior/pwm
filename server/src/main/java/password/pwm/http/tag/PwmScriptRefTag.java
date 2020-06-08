@@ -60,9 +60,9 @@ public class PwmScriptRefTag extends TagSupport
             final String output = "<script type=\"text/javascript\" nonce=\"" + cspNonce + "\" src=\"" + url + "\"></script><noscript></noscript>";
             pageContext.getOut().write( output );
         }
-        catch ( Exception e )
+        catch ( final Exception e )
         {
-            LOGGER.error( "error during scriptRef output of pwmFormID: " + e.getMessage() );
+            LOGGER.error( () -> "error during scriptRef output of pwmFormID: " + e.getMessage() );
         }
         return EVAL_PAGE;
     }
