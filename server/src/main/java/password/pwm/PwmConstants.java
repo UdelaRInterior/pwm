@@ -139,9 +139,8 @@ public abstract class PwmConstants
         INCLUDED_LOCALES = Collections.unmodifiableCollection( localeList );
     }
 
-    public static final String URL_CONFIG_DOMAINS = "media/pwm/domains.txt";
-    public static final String URL_CONFIG_NOT_DOMAINS = "media/pwm/not_domains.txt";
-
+    public static final String URL_CONFIG_DOMAINS = "webapps/pwm/config/domains.txt";
+    
     public static final String URL_JSP_CONFIG_GUIDE = "WEB-INF/jsp/configguide-%1%.jsp";
 
     public static final String URL_PREFIX_PRIVATE = "/private";
