@@ -352,7 +352,14 @@ public class PwmHttpClient implements AutoCloseable
                     + clientRequest.toDebugString( this, sslDebugText ) );
         }
 
+        LOGGER.trace( () -> "MODIF UDELAR INTERIOR - Pwm esta a punto de enviar una Request" );
         final HttpResponse httpResponse = executeRequest( clientRequest );
+        if ( httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK )
+        {
+            final String errorMsg = "MODIF UDELAR INTERIOR - Obtenemos un codigo de error en la Response: " + httpResponse.getStatusLine().toString();
+            final ErrorInformation errorInformation = new ErrorInformation( PwmError.ERROR_REMOTE_ERROR_VALUE, errorMsg );
+            LOGGER.error( errorInformation );
+        }        
 
         final PwmHttpClientResponse.PwmHttpClientResponseBuilder httpClientResponseBuilder = PwmHttpClientResponse.builder();
         httpClientResponseBuilder.requestID( clientRequest.getRequestID() );
@@ -452,6 +459,7 @@ public class PwmHttpClient implements AutoCloseable
             }
         }
 
+        LOGGER.trace( () -> "MODIF UDELAR INTERIOR - La siguiente línea ejecuta/envia la request: " + httpRequest.toString() );
         return httpClient.execute( httpRequest );
     }
 

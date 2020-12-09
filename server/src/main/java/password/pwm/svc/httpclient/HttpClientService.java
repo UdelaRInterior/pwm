@@ -110,8 +110,17 @@ public class HttpClientService implements PwmService
         final PwmHttpClient existingClient = threadLocal.get();
         if ( existingClient != null && !existingClient.isClosed() )
         {
-            stats.get( StatsKey.reusedClients ).incrementAndGet();
-            return existingClient;
+            //stats.get( StatsKey.reusedClients ).incrementAndGet();
+            //return existingClient;
+            try
+            {
+                existingClient.close();
+            }
+            catch ( final Exception e )
+            {
+                LOGGER.debug( () -> "error closing pwmHttpClient instance: " + e.getMessage() );
+            }
+            LOGGER.trace( () -> "MODIF UDELAR INTERIOR - Impedir que reutilice un cliente 'no cerrado'. Cuando determina que hay un cliete 'no cerrado', lo cierra y crea uno nuevo. Con esto logramos evitar el error del captcha 5032" );
         }
 
         final PwmHttpClient newClient = new PwmHttpClient( pwmApplication, pwmHttpClientConfiguration );
